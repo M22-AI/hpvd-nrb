@@ -1,0 +1,483 @@
+{
+  "metadata": {
+    "timestamp": "20260310_234449",
+    "kl_url": "https://knowledge-layer-production.up.railway.app",
+    "tenant_id": "BANKING_CORE",
+    "total_kl_documents": 36,
+    "total_chunks": 36
+  },
+  "j13_query": {
+    "query_id": "Q_LOAN_SUPPORT_001",
+    "scope": {
+      "domain": "banking",
+      "action_class": "LOAN_EXECUTION"
+    },
+    "allowed_topics": [],
+    "allowed_doc_types": [],
+    "query_payload": {
+      "text": "credit risk assessment loan default payment"
+    }
+  },
+  "pipeline_output": {
+    "j14": {
+      "schema_id": "manithy.hpvd_retrieval_raw.v1",
+      "query_id": "Q_LOAN_SUPPORT_001",
+      "domain": "document",
+      "candidates": [
+        {
+          "candidate_id": "kl_07d1f8f2-802f-443f-b861-5735d716c385",
+          "score": 0.3923553228378296,
+          "metadata": {
+            "topic": "credit_analysis",
+            "doc_type": "CREDIT_REPORT",
+            "text_preview": "[1437613] 11. CR 03 2020_17-11-2025 12.50.10.pdf. Document type: CREDIT_REPORT. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_f26c7a6c-2c87-4d1d-88be-ae22e87c5ebc",
+          "score": 0.3748058080673218,
+          "metadata": {
+            "topic": "credit_analysis",
+            "doc_type": "CREDIT_SPECIFICATION",
+            "text_preview": "[1437613] 3. precisazione del credito_17-11-2025 12.47.35.pdf. Document type: CREDIT_SPECIFICATION. Created by: seed_scr"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_75b4af9a-9290-4015-838a-43f5c42f2202",
+          "score": 0.36310291290283203,
+          "metadata": {
+            "topic": "credit_analysis",
+            "doc_type": "CREDIT_SPECIFICATION",
+            "text_preview": "[1440632] 3. Precisazione del credito_18-12-2025 17.08.26.pdf. Document type: CREDIT_SPECIFICATION. Created by: seed_scr"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_87e5ee60-50fd-40b5-93ff-6a9270f4696f",
+          "score": 0.33643460273742676,
+          "metadata": {
+            "topic": "risk_assessment",
+            "doc_type": "RISK_DECLARATION",
+            "text_preview": "[1437613] 9. Dichiarazione Rischio di Credito_17-11-2025 12.49.41.pdf. Document type: RISK_DECLARATION. Created by: seed"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_54d09cea-c6b3-4b89-9dfc-6b5c37778331",
+          "score": 0.33350494503974915,
+          "metadata": {
+            "topic": "credit_analysis",
+            "doc_type": "CREDIT_REPORT",
+            "text_preview": "[1440632] 11. Prima Info CR MARZO 2020_18-12-2025 17.09.17.pdf. Document type: CREDIT_REPORT. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_7ceae5a8-f873-4214-a93c-92d12e73ae35",
+          "score": 0.1922849714756012,
+          "metadata": {
+            "topic": "contract",
+            "doc_type": "CONTRACT",
+            "text_preview": "[1440632] 6. Contratto finanziamento_18-12-2025 17.14.10.pdf. Document type: CONTRACT. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_f709525f-22cf-4d61-b334-ee0b559f24d4",
+          "score": 0.1876790076494217,
+          "metadata": {
+            "topic": "legal_notice",
+            "doc_type": "PEC_RECEIPT",
+            "text_preview": "[1437613] 2. consegna pec_17-11-2025 12.47.27.pdf. Document type: PEC_RECEIPT. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_d3befefe-99ea-48ca-80c3-4641a49f6019",
+          "score": 0.17885693907737732,
+          "metadata": {
+            "topic": "compliance",
+            "doc_type": "COMPLIANCE",
+            "text_preview": "[1437613] 10. no concordato_17-11-2025 12.50.00.pdf. Document type: COMPLIANCE. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_527228cc-367d-4c19-a94f-211dcb1f5a33",
+          "score": 0.16249482333660126,
+          "metadata": {
+            "topic": "contract",
+            "doc_type": "CONTRACT",
+            "text_preview": "[1437613] 6. contratto e pda_11zon (2)_17-11-2025 12.49.12.pdf. Document type: CONTRACT. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_3f3d2a0d-c7ca-4c0b-9710-acc1234fe12a",
+          "score": 0.14353159070014954,
+          "metadata": {
+            "topic": "identity",
+            "doc_type": "IDENTITY_DOC",
+            "text_preview": "[1437613] 4. allegato 4 bis_17-11-2025 12.47.45.pdf. Document type: IDENTITY_DOC. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        }
+      ],
+      "diagnostics": {
+        "total_chunks": 36,
+        "topic_filtered": 36,
+        "returned": 10
+      }
+    },
+    "j15": {
+      "schema_id": "manithy.phase_filtered_set.v1",
+      "query_id": "Q_LOAN_SUPPORT_001",
+      "accepted": [
+        {
+          "candidate_id": "kl_07d1f8f2-802f-443f-b861-5735d716c385",
+          "score": 0.3923553228378296,
+          "metadata": {
+            "topic": "credit_analysis",
+            "doc_type": "CREDIT_REPORT",
+            "text_preview": "[1437613] 11. CR 03 2020_17-11-2025 12.50.10.pdf. Document type: CREDIT_REPORT. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_f26c7a6c-2c87-4d1d-88be-ae22e87c5ebc",
+          "score": 0.3748058080673218,
+          "metadata": {
+            "topic": "credit_analysis",
+            "doc_type": "CREDIT_SPECIFICATION",
+            "text_preview": "[1437613] 3. precisazione del credito_17-11-2025 12.47.35.pdf. Document type: CREDIT_SPECIFICATION. Created by: seed_scr"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_75b4af9a-9290-4015-838a-43f5c42f2202",
+          "score": 0.36310291290283203,
+          "metadata": {
+            "topic": "credit_analysis",
+            "doc_type": "CREDIT_SPECIFICATION",
+            "text_preview": "[1440632] 3. Precisazione del credito_18-12-2025 17.08.26.pdf. Document type: CREDIT_SPECIFICATION. Created by: seed_scr"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_87e5ee60-50fd-40b5-93ff-6a9270f4696f",
+          "score": 0.33643460273742676,
+          "metadata": {
+            "topic": "risk_assessment",
+            "doc_type": "RISK_DECLARATION",
+            "text_preview": "[1437613] 9. Dichiarazione Rischio di Credito_17-11-2025 12.49.41.pdf. Document type: RISK_DECLARATION. Created by: seed"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_54d09cea-c6b3-4b89-9dfc-6b5c37778331",
+          "score": 0.33350494503974915,
+          "metadata": {
+            "topic": "credit_analysis",
+            "doc_type": "CREDIT_REPORT",
+            "text_preview": "[1440632] 11. Prima Info CR MARZO 2020_18-12-2025 17.09.17.pdf. Document type: CREDIT_REPORT. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_7ceae5a8-f873-4214-a93c-92d12e73ae35",
+          "score": 0.1922849714756012,
+          "metadata": {
+            "topic": "contract",
+            "doc_type": "CONTRACT",
+            "text_preview": "[1440632] 6. Contratto finanziamento_18-12-2025 17.14.10.pdf. Document type: CONTRACT. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_f709525f-22cf-4d61-b334-ee0b559f24d4",
+          "score": 0.1876790076494217,
+          "metadata": {
+            "topic": "legal_notice",
+            "doc_type": "PEC_RECEIPT",
+            "text_preview": "[1437613] 2. consegna pec_17-11-2025 12.47.27.pdf. Document type: PEC_RECEIPT. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_d3befefe-99ea-48ca-80c3-4641a49f6019",
+          "score": 0.17885693907737732,
+          "metadata": {
+            "topic": "compliance",
+            "doc_type": "COMPLIANCE",
+            "text_preview": "[1437613] 10. no concordato_17-11-2025 12.50.00.pdf. Document type: COMPLIANCE. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_527228cc-367d-4c19-a94f-211dcb1f5a33",
+          "score": 0.16249482333660126,
+          "metadata": {
+            "topic": "contract",
+            "doc_type": "CONTRACT",
+            "text_preview": "[1437613] 6. contratto e pda_11zon (2)_17-11-2025 12.49.12.pdf. Document type: CONTRACT. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_3f3d2a0d-c7ca-4c0b-9710-acc1234fe12a",
+          "score": 0.14353159070014954,
+          "metadata": {
+            "topic": "identity",
+            "doc_type": "IDENTITY_DOC",
+            "text_preview": "[1437613] 4. allegato 4 bis_17-11-2025 12.47.45.pdf. Document type: IDENTITY_DOC. Created by: seed_script_v1"
+          },
+          "source_domain": "document"
+        }
+      ],
+      "rejected": [],
+      "filter_criteria": {
+        "allowed_topics": [],
+        "allowed_doc_types": []
+      }
+    },
+    "j16": {
+      "schema_id": "manithy.analog_family_assignment.v1",
+      "query_id": "Q_LOAN_SUPPORT_001",
+      "families": [
+        {
+          "family_id": "DF_001",
+          "members": [
+            {
+              "candidate_id": "kl_d3befefe-99ea-48ca-80c3-4641a49f6019",
+              "score": 0.17885693907737732,
+              "metadata": {
+                "topic": "compliance",
+                "doc_type": "COMPLIANCE",
+                "text_preview": "[1437613] 10. no concordato_17-11-2025 12.50.00.pdf. Document type: COMPLIANCE. Created by: seed_script_v1"
+              },
+              "source_domain": "document"
+            }
+          ],
+          "coherence": {
+            "mean_confidence": 0.17885693907737732,
+            "dispersion": 0.0,
+            "size": 1
+          },
+          "structural_signature": {
+            "phase": "compliance",
+            "avg_K": null,
+            "avg_LTV": null,
+            "avg_LVC": null
+          },
+          "uncertainty_flags": {
+            "phase_boundary": false,
+            "weak_support": true,
+            "partial_overlap": false
+          }
+        },
+        {
+          "family_id": "DF_002",
+          "members": [
+            {
+              "candidate_id": "kl_7ceae5a8-f873-4214-a93c-92d12e73ae35",
+              "score": 0.1922849714756012,
+              "metadata": {
+                "topic": "contract",
+                "doc_type": "CONTRACT",
+                "text_preview": "[1440632] 6. Contratto finanziamento_18-12-2025 17.14.10.pdf. Document type: CONTRACT. Created by: seed_script_v1"
+              },
+              "source_domain": "document"
+            },
+            {
+              "candidate_id": "kl_527228cc-367d-4c19-a94f-211dcb1f5a33",
+              "score": 0.16249482333660126,
+              "metadata": {
+                "topic": "contract",
+                "doc_type": "CONTRACT",
+                "text_preview": "[1437613] 6. contratto e pda_11zon (2)_17-11-2025 12.49.12.pdf. Document type: CONTRACT. Created by: seed_script_v1"
+              },
+              "source_domain": "document"
+            }
+          ],
+          "coherence": {
+            "mean_confidence": 0.17738989740610123,
+            "dispersion": 0.01489507406949997,
+            "size": 2
+          },
+          "structural_signature": {
+            "phase": "contract",
+            "avg_K": null,
+            "avg_LTV": null,
+            "avg_LVC": null
+          },
+          "uncertainty_flags": {
+            "phase_boundary": false,
+            "weak_support": true,
+            "partial_overlap": false
+          }
+        },
+        {
+          "family_id": "DF_003",
+          "members": [
+            {
+              "candidate_id": "kl_07d1f8f2-802f-443f-b861-5735d716c385",
+              "score": 0.3923553228378296,
+              "metadata": {
+                "topic": "credit_analysis",
+                "doc_type": "CREDIT_REPORT",
+                "text_preview": "[1437613] 11. CR 03 2020_17-11-2025 12.50.10.pdf. Document type: CREDIT_REPORT. Created by: seed_script_v1"
+              },
+              "source_domain": "document"
+            },
+            {
+              "candidate_id": "kl_f26c7a6c-2c87-4d1d-88be-ae22e87c5ebc",
+              "score": 0.3748058080673218,
+              "metadata": {
+                "topic": "credit_analysis",
+                "doc_type": "CREDIT_SPECIFICATION",
+                "text_preview": "[1437613] 3. precisazione del credito_17-11-2025 12.47.35.pdf. Document type: CREDIT_SPECIFICATION. Created by: seed_scr"
+              },
+              "source_domain": "document"
+            },
+            {
+              "candidate_id": "kl_75b4af9a-9290-4015-838a-43f5c42f2202",
+              "score": 0.36310291290283203,
+              "metadata": {
+                "topic": "credit_analysis",
+                "doc_type": "CREDIT_SPECIFICATION",
+                "text_preview": "[1440632] 3. Precisazione del credito_18-12-2025 17.08.26.pdf. Document type: CREDIT_SPECIFICATION. Created by: seed_scr"
+              },
+              "source_domain": "document"
+            },
+            {
+              "candidate_id": "kl_54d09cea-c6b3-4b89-9dfc-6b5c37778331",
+              "score": 0.33350494503974915,
+              "metadata": {
+                "topic": "credit_analysis",
+                "doc_type": "CREDIT_REPORT",
+                "text_preview": "[1440632] 11. Prima Info CR MARZO 2020_18-12-2025 17.09.17.pdf. Document type: CREDIT_REPORT. Created by: seed_script_v1"
+              },
+              "source_domain": "document"
+            }
+          ],
+          "coherence": {
+            "mean_confidence": 0.36594224721193314,
+            "dispersion": 0.021426932039987166,
+            "size": 4
+          },
+          "structural_signature": {
+            "phase": "credit_analysis",
+            "avg_K": null,
+            "avg_LTV": null,
+            "avg_LVC": null
+          },
+          "uncertainty_flags": {
+            "phase_boundary": false,
+            "weak_support": true,
+            "partial_overlap": false
+          }
+        },
+        {
+          "family_id": "DF_004",
+          "members": [
+            {
+              "candidate_id": "kl_3f3d2a0d-c7ca-4c0b-9710-acc1234fe12a",
+              "score": 0.14353159070014954,
+              "metadata": {
+                "topic": "identity",
+                "doc_type": "IDENTITY_DOC",
+                "text_preview": "[1437613] 4. allegato 4 bis_17-11-2025 12.47.45.pdf. Document type: IDENTITY_DOC. Created by: seed_script_v1"
+              },
+              "source_domain": "document"
+            }
+          ],
+          "coherence": {
+            "mean_confidence": 0.14353159070014954,
+            "dispersion": 0.0,
+            "size": 1
+          },
+          "structural_signature": {
+            "phase": "identity",
+            "avg_K": null,
+            "avg_LTV": null,
+            "avg_LVC": null
+          },
+          "uncertainty_flags": {
+            "phase_boundary": false,
+            "weak_support": true,
+            "partial_overlap": false
+          }
+        },
+        {
+          "family_id": "DF_005",
+          "members": [
+            {
+              "candidate_id": "kl_f709525f-22cf-4d61-b334-ee0b559f24d4",
+              "score": 0.1876790076494217,
+              "metadata": {
+                "topic": "legal_notice",
+                "doc_type": "PEC_RECEIPT",
+                "text_preview": "[1437613] 2. consegna pec_17-11-2025 12.47.27.pdf. Document type: PEC_RECEIPT. Created by: seed_script_v1"
+              },
+              "source_domain": "document"
+            }
+          ],
+          "coherence": {
+            "mean_confidence": 0.1876790076494217,
+            "dispersion": 0.0,
+            "size": 1
+          },
+          "structural_signature": {
+            "phase": "legal_notice",
+            "avg_K": null,
+            "avg_LTV": null,
+            "avg_LVC": null
+          },
+          "uncertainty_flags": {
+            "phase_boundary": false,
+            "weak_support": true,
+            "partial_overlap": false
+          }
+        },
+        {
+          "family_id": "DF_006",
+          "members": [
+            {
+              "candidate_id": "kl_87e5ee60-50fd-40b5-93ff-6a9270f4696f",
+              "score": 0.33643460273742676,
+              "metadata": {
+                "topic": "risk_assessment",
+                "doc_type": "RISK_DECLARATION",
+                "text_preview": "[1437613] 9. Dichiarazione Rischio di Credito_17-11-2025 12.49.41.pdf. Document type: RISK_DECLARATION. Created by: seed"
+              },
+              "source_domain": "document"
+            }
+          ],
+          "coherence": {
+            "mean_confidence": 0.33643460273742676,
+            "dispersion": 0.0,
+            "size": 1
+          },
+          "structural_signature": {
+            "phase": "risk_assessment",
+            "avg_K": null,
+            "avg_LTV": null,
+            "avg_LVC": null
+          },
+          "uncertainty_flags": {
+            "phase_boundary": false,
+            "weak_support": true,
+            "partial_overlap": false
+          }
+        }
+      ],
+      "total_members": 10,
+      "total_families": 6,
+      "metadata": {
+        "domain": "document"
+      }
+    }
+  }
+}

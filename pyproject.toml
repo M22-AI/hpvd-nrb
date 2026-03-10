@@ -66,6 +66,9 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 addopts = "-v --tb=short"
+markers = [
+    "integration: tests that require a live Knowledge Layer API",
+]
 filterwarnings = [
     # Suppress SWIG/FAISS DeprecationWarnings (not actionable from user code)
     "ignore::DeprecationWarning:swigfaiss",
