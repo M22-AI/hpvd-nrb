@@ -29,36 +29,56 @@
 
 ## Overview
 
-HPVD (Hybrid Probabilistic Vector Database) is a **retrieval engine** for finding historical analogs in financial trajectory data. Given a 60-day × 45-feature trajectory (the "query"), HPVD finds structurally similar historical trajectories and groups them into **Analog Families** — coherent clusters with explicit uncertainty markers.
+HPVD (Hybrid Probabilistic Vector Database) is a **multi-domain retrieval engine** for finding structurally or semantically similar historical analogs. Given a query (a financial trajectory *or* a text chunk), HPVD retrieves historically similar entries and groups them into **Analog Families** — coherent clusters with explicit uncertainty markers.
 
-**Critical design principle:** HPVD is **outcome-blind**. It retrieves structurally similar trajectories but does **not** compute probabilities, confidence intervals, or make predictions. That responsibility belongs to downstream systems (PMR-DB).
+**Critical design principle:** HPVD is **outcome-blind**. It produces structured empirical evidence but does **not** compute probabilities, confidence intervals, or make predictions. That responsibility belongs to downstream systems (PMR-DB).
+
+HPVD is composed of two layers:
+- **Core engine** — domain-agnostic sparse + dense retrieval with family formation (`HPVDEngine`)
+- **Adapter layer** — domain-specific strategy pattern that translates J-file envelopes into core queries and emits structured J-file outputs (`HPVDPipelineEngine`)
 
 ### What HPVD Does
 
-- Finds historically analogous trajectories via sparse regime filtering + dense FAISS search
-- Fuses trajectory distance and Cognitive DNA similarity into a single coherence score
+- Accepts queries from multiple domains (finance, document, banking, etc.) via a unified J13 → J14 → J15 → J16 pipeline
+- Finds historically analogous entries via sparse regime filtering (finance) or keyword/topic filtering (document) + dense FAISS search
+- Fuses trajectory/semantic distance and Cognitive DNA similarity into a single coherence score
 - Groups retrieved analogs into families with coherence metrics and uncertainty flags
 - Outputs structured JSON (`hpvd_output_v1`) ready for downstream consumption
 
 ### What HPVD Does NOT Do
 
-- Predict future prices or direction
+- Predict future prices, direction, or outcomes
 - Compute probability distributions, entropy, or abstention decisions
-- Make trading recommendations
+- Make trading or business recommendations
 - Access outcome labels (`label_h1`, `return_h5`, etc.) in its core logic
 
 ---
 
 ## Core Architecture
 
+### Core Engine (domain-agnostic)
+
 ```
-Query (60×45 trajectory + 16-d DNA)
+Query (HPVDInputBundle: 60×45 trajectory + 16-d DNA)
   → Validate (HPVDInputBundle.validate())
   → Sparse Filter (SparseRegimeIndex — O(1) inverted index by regime)
   → Dense Search (FAISS IVFFlat/Flat — 256-d PCA embeddings)
   → Multi-Channel Fusion (trajectory dist × 0.7 + DNA dist × 0.3)
   → Family Formation (group by regime, compute coherence)
   → HPVD_Output (analog_families + retrieval_diagnostics + metadata)
+```
+
+### Adapter Layer (multi-domain pipeline)
+
+```
+J13_PostCoreQuery (domain: finance | document | banking | …)
+  → J13Adapter (translate to domain-specific query dict)
+  → StrategyDispatcher (route to matching RetrievalStrategy)
+      ├── FinanceRetrievalStrategy   → HPVDEngine (trajectory search)
+      └── DocumentRetrievalStrategy → BM25/vector text search
+  → J14_RetrievalRaw   (raw candidate list)
+  → J15_PhaseFilteredSet (phase-filtered candidates)
+  → J16_AnalogFamilyAssignment (final family assignments)
 ```
 
 ### Components
@@ -73,7 +93,11 @@ Query (60×45 trajectory + 16-d DNA)
 | **HybridDistanceCalculator** | `distance.py` | Multi-component distance: `0.3×L2 + 0.4×Cosine + 0.3×Temporal` |
 | **DNASimilarityCalculator** | `dna_similarity.py` | 16-d Cognitive DNA matching (cosine + L2 + phase proximity) |
 | **FamilyFormationEngine** | `family.py` | Groups candidates into Analog Families with coherence metrics |
-| **HPVDEngine** | `engine.py` | Main orchestrator combining all components |
+| **HPVDEngine** | `engine.py` | Core orchestrator combining all components |
+| **HPVDPipelineEngine** | `adapters/pipeline_engine.py` | Multi-domain pipeline orchestrator (J13 → J16) |
+| **RetrievalStrategy** | `adapters/retrieval_strategy.py` | Abstract base + `RetrievalCandidate` domain-agnostic output type |
+| **StrategyDispatcher** | `adapters/strategy_dispatcher.py` | Routes J13 queries to the correct strategy by domain |
+| **J-file schemas** | `adapters/j_file_schemas.py` | Typed dataclasses for J13/J14/J15/J16 envelopes |
 | **CLI** | `cli.py` | Command-line interface (`build-index` / `search`) |
 
 ---
@@ -333,7 +357,16 @@ HPVD-M22/
 │   │   ├── engine.py                  # HPVDEngine + HPVD_Output
 │   │   ├── cli.py                     # CLI (build-index / search)
 │   │   ├── __main__.py                # python -m src.hpvd.cli
-│   │   └── synthetic_data_generator.py
+│   │   ├── synthetic_data_generator.py
+│   │   └── adapters/                  # Multi-domain adapter layer
+│   │       ├── j_file_schemas.py      # J13/J14/J15/J16 typed schemas
+│   │       ├── j13_adapter.py         # J13 → domain query dict
+│   │       ├── j14_emitter.py         # Emit J14 raw retrieval
+│   │       ├── j15_emitter.py         # Emit J15 phase-filtered set
+│   │       ├── j16_emitter.py         # Emit J16 family assignments
+│   │       ├── pipeline_engine.py     # HPVDPipelineEngine (J13→J16)
+│   │       ├── retrieval_strategy.py  # RetrievalStrategy ABC + RetrievalCandidate
+│   │       └── strategy_dispatcher.py # Routes queries by domain
 │   ├── demo_hpvd.py                   # End-to-end retrieval demo
 │   └── prototypes/
 │       └── bm25_prototype.py          # BM25 text retrieval demo
