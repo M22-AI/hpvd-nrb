@@ -1,6 +1,6 @@
 # HPVD Adaptation Strategy: Trajectory vs Document Retrieval
 
-> Dokumen ini menjelaskan bagaimana HPVD disesuaikan untuk mendukung end-to-end design Manithy yang mencakup tiga domain: **Finance** (trajectory), **Chatbot/Refund** (dokumen), dan **Banking/Loan** (dokumen OCR).
+> Dokumen ini menjelaskan bagaimana HPVD disesuaikan untuk mendukung design Manithy yang mencakup tiga domain: **Finance** (trajectory), **Chatbot/Refund** (dokumen), dan **Banking/Loan** (dokumen OCR).
 
 ---
 

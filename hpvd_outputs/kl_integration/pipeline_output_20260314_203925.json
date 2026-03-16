@@ -1,0 +1,382 @@
+{
+  "metadata": {
+    "timestamp": "20260314_203925",
+    "kl_url": "https://knowledge-layer-production.up.railway.app",
+    "total_kl_documents": 36,
+    "total_chunks": 36,
+    "kl_managed_chunks": 0,
+    "synthetic_chunks": 36,
+    "schema_version": "manithy.post_core_query.v2"
+  },
+  "j13_query": {
+    "schema_id": "manithy.post_core_query.v2",
+    "query_id": "Q_LOAN_SUPPORT_001",
+    "scope": {
+      "domain": "banking",
+      "action_class": "LOAN_EXECUTION"
+    },
+    "allowed_topics": [],
+    "allowed_corpora": [],
+    "allowed_doc_types": [],
+    "query_payload": {
+      "text": "credit risk assessment loan default payment"
+    }
+  },
+  "pipeline_output": {
+    "j14": {
+      "schema_id": "manithy.hpvd_retrieval_raw.v1",
+      "query_id": "Q_LOAN_SUPPORT_001",
+      "domain": "document",
+      "candidates": [
+        {
+          "candidate_id": "kl_86f76ccf-72e1-46d6-8fd5-647e7c3e24a0",
+          "score": 0.48419585824012756,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "CREDIT_REPORT",
+            "text_preview": "[1437613] 11. CR 03 2020_17-11-2025 12.50.10.pdf. Document type: CREDIT_REPORT. Domain: finance. Action: RISK_ASSESSMENT"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_43552ca2-1bab-4125-875a-978a05422abd",
+          "score": 0.4143950939178467,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "CREDIT_REPORT",
+            "text_preview": "[1440632] 11. Prima Info CR MARZO 2020_18-12-2025 17.09.17.pdf. Document type: CREDIT_REPORT. Domain: finance. Action: R"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_78ddd173-eb90-4bc0-ae95-b221a908d599",
+          "score": 0.3609911799430847,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "CREDIT_SPECIFICATION",
+            "text_preview": "[1437613] 3. precisazione del credito_17-11-2025 12.47.35.pdf. Document type: CREDIT_SPECIFICATION. Domain: finance. Act"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_ecb58759-42c4-4f7b-83cd-a996cab0a5dd",
+          "score": 0.3437497615814209,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "RISK_DECLARATION",
+            "text_preview": "[1437613] 9. Dichiarazione Rischio di Credito_17-11-2025 12.49.41.pdf. Document type: RISK_DECLARATION. Domain: finance."
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_2b2c0c57-e535-4f81-85c0-6d0f30687d94",
+          "score": 0.34288710355758667,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "CREDIT_SPECIFICATION",
+            "text_preview": "[1440632] 3. Precisazione del credito_18-12-2025 17.08.26.pdf. Document type: CREDIT_SPECIFICATION. Domain: finance. Act"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_65e28732-3c48-4e9f-aefd-beffd77343db",
+          "score": 0.33124011754989624,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "INTIMAZIONE",
+            "text_preview": "[1437613] 1. intimazione_17-11-2025 12.47.20.pdf. Document type: INTIMAZIONE. Domain: finance. Action: DEBT_COLLECTION"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_c7f32add-474f-4f13-93c4-ade42bddd0c5",
+          "score": 0.3306138515472412,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "PEC_RECEIPT",
+            "text_preview": "[1437613] 2. consegna pec_17-11-2025 12.47.27.pdf. Document type: PEC_RECEIPT. Domain: finance. Action: DEBT_COLLECTION"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_70b3de40-3dcb-4b5a-b34f-fdc1775593d6",
+          "score": 0.32697349786758423,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "DELIBERA",
+            "text_preview": "[1440632] 5.1 data della delibera_18-12-2025 17.13.58.pdf. Document type: DELIBERA. Domain: finance. Action: CREDIT_APPR"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_7941fc15-ff43-4b58-a3a0-f63b1d60c7b9",
+          "score": 0.31254565715789795,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "AMMORTAMENTO",
+            "text_preview": "[1437613] 8. piano avvio proced_17-11-2025 12.49.31.pdf. Document type: AMMORTAMENTO. Domain: finance. Action: REPAYMENT"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_7b682f8d-baac-4c36-901e-18cf364ac123",
+          "score": 0.30875492095947266,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "PEC_RECEIPT",
+            "text_preview": "[1440632] 2. Ricevuta di consegna della PEC_18-12-2025 17.07.04.pdf. Document type: PEC_RECEIPT. Domain: finance. Action"
+          },
+          "source_domain": "document"
+        }
+      ],
+      "diagnostics": {
+        "total_chunks": 36,
+        "topic_filtered": 36,
+        "returned": 10
+      }
+    },
+    "j15": {
+      "schema_id": "manithy.phase_filtered_set.v1",
+      "query_id": "Q_LOAN_SUPPORT_001",
+      "accepted": [
+        {
+          "candidate_id": "kl_86f76ccf-72e1-46d6-8fd5-647e7c3e24a0",
+          "score": 0.48419585824012756,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "CREDIT_REPORT",
+            "text_preview": "[1437613] 11. CR 03 2020_17-11-2025 12.50.10.pdf. Document type: CREDIT_REPORT. Domain: finance. Action: RISK_ASSESSMENT"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_43552ca2-1bab-4125-875a-978a05422abd",
+          "score": 0.4143950939178467,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "CREDIT_REPORT",
+            "text_preview": "[1440632] 11. Prima Info CR MARZO 2020_18-12-2025 17.09.17.pdf. Document type: CREDIT_REPORT. Domain: finance. Action: R"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_78ddd173-eb90-4bc0-ae95-b221a908d599",
+          "score": 0.3609911799430847,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "CREDIT_SPECIFICATION",
+            "text_preview": "[1437613] 3. precisazione del credito_17-11-2025 12.47.35.pdf. Document type: CREDIT_SPECIFICATION. Domain: finance. Act"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_ecb58759-42c4-4f7b-83cd-a996cab0a5dd",
+          "score": 0.3437497615814209,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "RISK_DECLARATION",
+            "text_preview": "[1437613] 9. Dichiarazione Rischio di Credito_17-11-2025 12.49.41.pdf. Document type: RISK_DECLARATION. Domain: finance."
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_2b2c0c57-e535-4f81-85c0-6d0f30687d94",
+          "score": 0.34288710355758667,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "CREDIT_SPECIFICATION",
+            "text_preview": "[1440632] 3. Precisazione del credito_18-12-2025 17.08.26.pdf. Document type: CREDIT_SPECIFICATION. Domain: finance. Act"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_65e28732-3c48-4e9f-aefd-beffd77343db",
+          "score": 0.33124011754989624,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "INTIMAZIONE",
+            "text_preview": "[1437613] 1. intimazione_17-11-2025 12.47.20.pdf. Document type: INTIMAZIONE. Domain: finance. Action: DEBT_COLLECTION"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_c7f32add-474f-4f13-93c4-ade42bddd0c5",
+          "score": 0.3306138515472412,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "PEC_RECEIPT",
+            "text_preview": "[1437613] 2. consegna pec_17-11-2025 12.47.27.pdf. Document type: PEC_RECEIPT. Domain: finance. Action: DEBT_COLLECTION"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_70b3de40-3dcb-4b5a-b34f-fdc1775593d6",
+          "score": 0.32697349786758423,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "DELIBERA",
+            "text_preview": "[1440632] 5.1 data della delibera_18-12-2025 17.13.58.pdf. Document type: DELIBERA. Domain: finance. Action: CREDIT_APPR"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_7941fc15-ff43-4b58-a3a0-f63b1d60c7b9",
+          "score": 0.31254565715789795,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "AMMORTAMENTO",
+            "text_preview": "[1437613] 8. piano avvio proced_17-11-2025 12.49.31.pdf. Document type: AMMORTAMENTO. Domain: finance. Action: REPAYMENT"
+          },
+          "source_domain": "document"
+        },
+        {
+          "candidate_id": "kl_7b682f8d-baac-4c36-901e-18cf364ac123",
+          "score": 0.30875492095947266,
+          "metadata": {
+            "topic": "finance",
+            "doc_type": "PEC_RECEIPT",
+            "text_preview": "[1440632] 2. Ricevuta di consegna della PEC_18-12-2025 17.07.04.pdf. Document type: PEC_RECEIPT. Domain: finance. Action"
+          },
+          "source_domain": "document"
+        }
+      ],
+      "rejected": [],
+      "filter_criteria": {
+        "allowed_topics": [],
+        "allowed_doc_types": []
+      }
+    },
+    "j16": {
+      "schema_id": "manithy.analog_family_assignment.v1",
+      "query_id": "Q_LOAN_SUPPORT_001",
+      "families": [
+        {
+          "family_id": "DF_001",
+          "members": [
+            {
+              "candidate_id": "kl_86f76ccf-72e1-46d6-8fd5-647e7c3e24a0",
+              "score": 0.48419585824012756,
+              "metadata": {
+                "topic": "finance",
+                "doc_type": "CREDIT_REPORT",
+                "text_preview": "[1437613] 11. CR 03 2020_17-11-2025 12.50.10.pdf. Document type: CREDIT_REPORT. Domain: finance. Action: RISK_ASSESSMENT"
+              },
+              "source_domain": "document"
+            },
+            {
+              "candidate_id": "kl_43552ca2-1bab-4125-875a-978a05422abd",
+              "score": 0.4143950939178467,
+              "metadata": {
+                "topic": "finance",
+                "doc_type": "CREDIT_REPORT",
+                "text_preview": "[1440632] 11. Prima Info CR MARZO 2020_18-12-2025 17.09.17.pdf. Document type: CREDIT_REPORT. Domain: finance. Action: R"
+              },
+              "source_domain": "document"
+            },
+            {
+              "candidate_id": "kl_78ddd173-eb90-4bc0-ae95-b221a908d599",
+              "score": 0.3609911799430847,
+              "metadata": {
+                "topic": "finance",
+                "doc_type": "CREDIT_SPECIFICATION",
+                "text_preview": "[1437613] 3. precisazione del credito_17-11-2025 12.47.35.pdf. Document type: CREDIT_SPECIFICATION. Domain: finance. Act"
+              },
+              "source_domain": "document"
+            },
+            {
+              "candidate_id": "kl_ecb58759-42c4-4f7b-83cd-a996cab0a5dd",
+              "score": 0.3437497615814209,
+              "metadata": {
+                "topic": "finance",
+                "doc_type": "RISK_DECLARATION",
+                "text_preview": "[1437613] 9. Dichiarazione Rischio di Credito_17-11-2025 12.49.41.pdf. Document type: RISK_DECLARATION. Domain: finance."
+              },
+              "source_domain": "document"
+            },
+            {
+              "candidate_id": "kl_2b2c0c57-e535-4f81-85c0-6d0f30687d94",
+              "score": 0.34288710355758667,
+              "metadata": {
+                "topic": "finance",
+                "doc_type": "CREDIT_SPECIFICATION",
+                "text_preview": "[1440632] 3. Precisazione del credito_18-12-2025 17.08.26.pdf. Document type: CREDIT_SPECIFICATION. Domain: finance. Act"
+              },
+              "source_domain": "document"
+            },
+            {
+              "candidate_id": "kl_65e28732-3c48-4e9f-aefd-beffd77343db",
+              "score": 0.33124011754989624,
+              "metadata": {
+                "topic": "finance",
+                "doc_type": "INTIMAZIONE",
+                "text_preview": "[1437613] 1. intimazione_17-11-2025 12.47.20.pdf. Document type: INTIMAZIONE. Domain: finance. Action: DEBT_COLLECTION"
+              },
+              "source_domain": "document"
+            },
+            {
+              "candidate_id": "kl_c7f32add-474f-4f13-93c4-ade42bddd0c5",
+              "score": 0.3306138515472412,
+              "metadata": {
+                "topic": "finance",
+                "doc_type": "PEC_RECEIPT",
+                "text_preview": "[1437613] 2. consegna pec_17-11-2025 12.47.27.pdf. Document type: PEC_RECEIPT. Domain: finance. Action: DEBT_COLLECTION"
+              },
+              "source_domain": "document"
+            },
+            {
+              "candidate_id": "kl_70b3de40-3dcb-4b5a-b34f-fdc1775593d6",
+              "score": 0.32697349786758423,
+              "metadata": {
+                "topic": "finance",
+                "doc_type": "DELIBERA",
+                "text_preview": "[1440632] 5.1 data della delibera_18-12-2025 17.13.58.pdf. Document type: DELIBERA. Domain: finance. Action: CREDIT_APPR"
+              },
+              "source_domain": "document"
+            },
+            {
+              "candidate_id": "kl_7941fc15-ff43-4b58-a3a0-f63b1d60c7b9",
+              "score": 0.31254565715789795,
+              "metadata": {
+                "topic": "finance",
+                "doc_type": "AMMORTAMENTO",
+                "text_preview": "[1437613] 8. piano avvio proced_17-11-2025 12.49.31.pdf. Document type: AMMORTAMENTO. Domain: finance. Action: REPAYMENT"
+              },
+              "source_domain": "document"
+            },
+            {
+              "candidate_id": "kl_7b682f8d-baac-4c36-901e-18cf364ac123",
+              "score": 0.30875492095947266,
+              "metadata": {
+                "topic": "finance",
+                "doc_type": "PEC_RECEIPT",
+                "text_preview": "[1440632] 2. Ricevuta di consegna della PEC_18-12-2025 17.07.04.pdf. Document type: PEC_RECEIPT. Domain: finance. Action"
+              },
+              "source_domain": "document"
+            }
+          ],
+          "coherence": {
+            "mean_confidence": 0.3556347042322159,
+            "dispersion": 0.05139083816099847,
+            "size": 10
+          },
+          "structural_signature": {
+            "phase": "finance",
+            "avg_K": null,
+            "avg_LTV": null,
+            "avg_LVC": null
+          },
+          "uncertainty_flags": {
+            "phase_boundary": false,
+            "weak_support": true,
+            "partial_overlap": false
+          }
+        }
+      ],
+      "total_members": 10,
+      "total_families": 1,
+      "metadata": {
+        "domain": "document"
+      }
+    }
+  }
+}

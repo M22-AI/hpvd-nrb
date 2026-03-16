@@ -423,5 +423,4 @@ HPVD menerima J13 (PostCoreQuery)
 
 ---
 
-> **Kontak:** Untuk pertanyaan terkait kebutuhan HPVD, hubungi Junpito (HPVD Module).
 > **Last updated:** 2026-03-10
