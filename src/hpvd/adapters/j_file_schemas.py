@@ -24,11 +24,13 @@ class J13_PostCoreQuery:
     Attributes:
         schema_id: Schema identifier (``manithy.post_core_query.v2``).
         query_id: Unique query identifier.
-        scope: Domain and action class (e.g. ``{"domain": "finance", "action_class": "analog_search"}``).
-        allowed_topics: Restrict retrieval to these topics / regimes.
-        allowed_corpora: Restrict to named corpora (e.g. ``["equity_us"]``).
+        scope: Domain and action class (e.g. ``{"domain": "knowledge", "action_class": "loan_application"}``).
+        allowed_topics: Restrict retrieval to these topics / regimes (finance/document domains).
+        allowed_corpora: Restrict to named corpora (finance/document domains).
         allowed_doc_types: Optional doc-type filter (document domain).
         query_payload: Domain-specific payload (HPVDInputBundle fields for finance, text for document).
+        observed_data: Observed fields from Parser output (knowledge domain — Manithy v1).
+        sector: Sector identifier from Parser metadata (knowledge domain — Manithy v1).
     """
 
     query_id: str
@@ -37,6 +39,8 @@ class J13_PostCoreQuery:
     allowed_corpora: List[str] = field(default_factory=list)
     allowed_doc_types: List[str] = field(default_factory=list)
     query_payload: Dict[str, Any] = field(default_factory=dict)
+    observed_data: Dict[str, Any] = field(default_factory=dict)
+    sector: str = ""
     schema_id: str = "manithy.post_core_query.v2"
 
     def to_dict(self) -> Dict[str, Any]:
@@ -48,6 +52,8 @@ class J13_PostCoreQuery:
             "allowed_corpora": list(self.allowed_corpora),
             "allowed_doc_types": list(self.allowed_doc_types),
             "query_payload": dict(self.query_payload),
+            "observed_data": dict(self.observed_data),
+            "sector": self.sector,
         }
 
     @classmethod
@@ -63,6 +69,8 @@ class J13_PostCoreQuery:
             allowed_corpora=list(data.get("allowed_corpora", [])),
             allowed_doc_types=list(data.get("allowed_doc_types", [])),
             query_payload=dict(data.get("query_payload", {})),
+            observed_data=dict(data.get("observed_data", {})),
+            sector=str(data.get("sector", "")),
         )
 
 

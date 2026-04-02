@@ -1,51 +1,76 @@
-# HPVD-M22
+# HPVD-M22 — Manithy v1
 
-**Hybrid Probabilistic Vector Database for Trajectory Intelligence**
+**HPVD Knowledge Retrieval Engine | NRB Component | Deterministic Attestation**
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version: 1.0.0-alpha1](https://img.shields.io/badge/version-1.0.0--alpha1-orange.svg)](#)
-[![Tests: 72 passed](https://img.shields.io/badge/tests-72%20passed-brightgreen.svg)](#running-tests)
+[![Version: 1.0.0-alpha2](https://img.shields.io/badge/version-1.0.0--alpha2-orange.svg)](#)
+[![Tests: 147 passed](https://img.shields.io/badge/tests-147%20passed-brightgreen.svg)](#running-tests)
 
 ---
 
 ## Overview
 
-HPVD adalah **multi-domain retrieval engine** untuk mencari analog historis yang secara struktur mirip dengan query (trajectory finansial *atau* text chunk), lalu mengelompokkannya menjadi **Analog Families** — cluster koheren dengan explicit uncertainty markers.
+HPVD adalah **knowledge retrieval engine** yang berjalan di **NRB (Non-Binding Realm)** dalam sistem **Manithy v1 — Deterministic Attestation**. Peran utama HPVD adalah me-retrieve Policy, Product, Rule Mapping, dan Document Schema yang relevan dari Knowledge Layer, berdasarkan `observed_data` yang dihasilkan Parser.
 
-**Critical design principle:** HPVD adalah **outcome-blind**. Ia menghasilkan structured empirical evidence, tidak menghitung probabilitas atau membuat prediksi. Itu tanggung jawab downstream systems (PMR-DB).
+**Critical design principles:**
+- **Non-binding:** Output HPVD adalah *candidates* (informatif, bukan autoritative). Tidak ada decision-making di sini.
+- **Sector-agnostic:** Satu engine untuk Banking, Finance, Chatbot, dan sektor lainnya.
+- **Deterministic:** Input sama → candidates sama, urutan sama.
+- **Traceable:** Setiap candidate menyertakan `provenance` (sumber data).
 
 HPVD terdiri dari dua layer:
-- **Core engine** — domain-agnostic sparse + dense retrieval dengan family formation (`HPVDEngine`)
-- **Adapter layer** — domain-specific strategy pattern yang mentranslasi J-file envelopes ke core queries dan emit structured J-file outputs (`HPVDPipelineEngine`)
+- **Primary:** `KnowledgeRetrievalStrategy` — sector filter + field matching → Policy/Product/RuleMapping candidates
+- **Legacy:** `FinanceRetrievalStrategy` — analog search untuk OHLCV market data (tetap valid, bukan primary interface)
 
 ---
 
-## Core Architecture
+## Architecture
 
-### Core Engine (domain-agnostic)
-
-```
-Query (HPVDInputBundle: 60×45 trajectory + 16-d DNA)
-  → Validate (HPVDInputBundle.validate())
-  → Sparse Filter (SparseRegimeIndex — O(1) inverted index by regime)
-  → Dense Search (FAISS IVFFlat/Flat — 256-d PCA embeddings)
-  → Multi-Channel Fusion (trajectory dist × 0.7 + DNA dist × 0.3)
-  → Family Formation (group by regime, compute coherence)
-  → HPVD_Output (analog_families + retrieval_diagnostics + metadata)
-```
-
-### Adapter Layer (multi-domain pipeline)
+### Manithy v1 Pipeline (simplified)
 
 ```
-J13_PostCoreQuery (domain: finance | document | banking | …)
-  → J13Adapter (translate to domain-specific query dict)
-  → StrategyDispatcher (route to matching RetrievalStrategy)
-      ├── FinanceRetrievalStrategy   → HPVDEngine (trajectory search)
+[ INPUT: request + files ]
+          │
+          ▼
+┌─────────────────────────────────────────────┐
+│ NRB — Non-Binding Realm                     │
+│                                             │
+│  Parser (sector-specific)                   │
+│  → observed_data + documents + metadata     │
+│          │                                  │
+│          ▼                                  │
+│  HPVD  ◄─── Knowledge Layer                │
+│  (sector filter + field match)              │
+│  → candidates [{type, data, provenance}]   │
+│          │                                  │
+│          ▼                                  │
+│  PMR  → hypotheses                          │
+│          │                                  │
+│          ▼                                  │
+│  Knowledge Builder → KNOWN/UNKNOWN/CONFLICT │
+└─────────────────────────────────────────────┘
+          │
+          ▼  Boundary t-1 (freeze observed state)
+┌─────────────────────────────────────────────┐
+│ RB CORE                                     │
+│  VectorState → V1 (Coverage) → V3 (Decision)│
+│  → Evidence Pack                            │
+└─────────────────────────────────────────────┘
+```
+
+### Adapter Layer (HPVDPipelineEngine)
+
+```
+J13_PostCoreQuery (domain: "knowledge" | "finance" | "document")
+  → J13Adapter (translate to strategy-specific query dict)
+  → StrategyDispatcher (route by domain)
+      ├── KnowledgeRetrievalStrategy → Policy/Product/RuleMapping candidates
+      ├── FinanceRetrievalStrategy   → HPVDEngine (trajectory analog search)
       └── DocumentRetrievalStrategy → BM25/vector text search
-  → J14_RetrievalRaw   (raw candidate list)
-  → J15_PhaseFilteredSet (phase-filtered candidates)
-  → J16_AnalogFamilyAssignment (final family assignments)
+  → J14_RetrievalRaw   (raw candidates)
+  → J15_PhaseFilteredSet (filtered candidates)
+  → J16_AnalogFamilyAssignment (grouped by type/family)
 ```
 
 ---
@@ -65,14 +90,62 @@ pip install -r requirements.txt
 ### 2. Verify
 
 ```powershell
-pytest tests/ -q
-# Expected: 72 passed, ~32 warnings
+venv\Scripts\pytest.exe tests/ -q
+# Expected: 147 passed, 9 skipped (live KL integration), ~43 warnings
 ```
 
-### 3. Run Demo
+### 3. Knowledge Retrieval (Primary — Manithy v1)
 
-```powershell
-python -m src.demo_hpvd
+```python
+from hpvd.adapters import HPVDPipelineEngine
+from hpvd.adapters.strategies import KnowledgeRetrievalStrategy
+
+# Knowledge corpus (Policy / Product / RuleMapping / DocumentSchema dicts)
+corpus = [
+    {
+        "object_type": "policy",
+        "policy_id": "POLICY_SME_LOAN_V1",
+        "sector": "banking",
+        "eligibility_rules": {"min_income": 3_000_000},
+        "required_documents": ["loan_application_form", "identity_document"],
+        "provenance": {"source": "bank_internal_policy"},
+    },
+    {
+        "object_type": "rule_mapping",
+        "mapping_id": "RULE_MAP_SME_LOAN_V1",
+        "sector": "banking",
+        "v1_required_fields": ["loan_amount", "beneficiary_name"],
+        "v3_required_fields": ["loan_amount", "income", "dti_ratio"],
+        "provenance": {"source": "core_binding_definition"},
+    },
+]
+
+pipeline = HPVDPipelineEngine()
+pipeline.register_strategy(KnowledgeRetrievalStrategy())
+pipeline.build_knowledge_index(corpus)
+
+result = pipeline.process_query({
+    "query_id": "REQ_001",
+    "scope": {"domain": "knowledge"},
+    "observed_data": {"loan_amount": 50_000_000, "income": 10_000_000},
+    "sector": "banking",
+})
+
+for candidate in result.j14.candidates:
+    print(f"type={candidate['knowledge_type']}, id={candidate['data'].get('policy_id') or candidate['data'].get('mapping_id')}")
+# type=policy, id=POLICY_SME_LOAN_V1
+# type=rule_mapping, id=RULE_MAP_SME_LOAN_V1
+```
+
+### 4. Finance Market Data (Legacy — FinanceRetrievalStrategy)
+
+```python
+from hpvd import HPVDEngine, HPVDInputBundle, HPVD_Output
+
+engine = HPVDEngine()
+engine.build_from_bundles(list_of_bundles)
+output: HPVD_Output = engine.search_families(query_bundle)
+d = output.to_dict()
 ```
 
 ---
@@ -80,49 +153,48 @@ python -m src.demo_hpvd
 ## Running Tests
 
 ```powershell
-pytest tests/ -v                                      # verbose
-pytest tests/ -q                                      # quick summary
-pytest tests/ --cov=src/hpvd --cov-report=html       # with coverage
-pytest tests/test_contract.py -v                      # specific file
+venv\Scripts\pytest.exe tests/ -v                                      # verbose
+venv\Scripts\pytest.exe tests/ -q                                      # quick summary
+venv\Scripts\pytest.exe tests/ --cov=src/hpvd --cov-report=html       # coverage
+venv\Scripts\pytest.exe tests/test_knowledge_retrieval.py -v           # knowledge tests only
 ```
 
 ---
 
-## Output Schema (`hpvd_output_v1`)
+## Knowledge Output Schema (J14 — knowledge domain)
 
 ```json
 {
-  "metadata": {
-    "hpvd_version": "v1",
-    "query_id": "query_001",
-    "schema_version": "hpvd_output_v1",
-    "timestamp": "2024-01-15T00:00:00+00:00"
-  },
-  "retrieval_diagnostics": {
-    "candidates_considered": 200,
-    "candidates_admitted": 45,
-    "families_formed": 3,
-    "latency_ms": 12.5
-  },
-  "analog_families": [
+  "schema_id": "manithy.hpvd_retrieval_raw.v1",
+  "query_id": "REQ_001",
+  "domain": "knowledge",
+  "candidates": [
     {
-      "family_id": "AF_001",
-      "members": [{"trajectory_id": "hist_034", "confidence": 0.57}],
-      "coherence": {"mean_confidence": 0.55, "dispersion": 0.03, "size": 15},
-      "structural_signature": {"phase": "stable_expansion", "avg_K": 5.2, "avg_LTV": 0.3},
-      "uncertainty_flags": {"phase_boundary": false, "weak_support": false}
+      "knowledge_type": "policy",
+      "sector": "banking",
+      "data": {
+        "policy_id": "POLICY_SME_LOAN_V1",
+        "required_documents": ["loan_application_form", "identity_document"],
+        "eligibility_rules": {"min_income": 3000000}
+      },
+      "provenance": {"source": "bank_internal_policy", "created_at": "2026-01-01"}
+    },
+    {
+      "knowledge_type": "rule_mapping",
+      "sector": "banking",
+      "data": {
+        "mapping_id": "RULE_MAP_SME_LOAN_V1",
+        "v1_required_fields": ["loan_amount", "beneficiary_name"]
+      },
+      "provenance": {"source": "core_binding_definition"}
     }
-  ]
+  ],
+  "diagnostics": {
+    "sector_matched": "banking",
+    "objects_returned": 2,
+    "rule_mapping_forced": true
+  }
 }
-```
-
-**Programmatic serialization:**
-
-```python
-output = engine.search_families(query_bundle)
-d = output.to_dict()                             # → dict
-j = output.to_json(indent=2)                     # → JSON string
-restored = HPVD_Output.from_dict(d)              # → HPVD_Output
 ```
 
 ---
@@ -131,46 +203,50 @@ restored = HPVD_Output.from_dict(d)              # → HPVD_Output
 
 ```
 HPVD-M22/
-├── src/hpvd/                  # Core library
-│   ├── engine.py              # HPVDEngine + HPVD_Output
-│   ├── trajectory.py          # Trajectory + HPVDInputBundle
-│   ├── sparse_index.py        # Regime inverted index
-│   ├── dense_index.py         # FAISS wrapper
-│   ├── distance.py            # Hybrid distance calculator
-│   ├── embedding.py           # PCA embedding computer
-│   ├── dna_similarity.py      # Cognitive DNA matching
-│   ├── family.py              # Family formation engine
-│   ├── cli.py                 # CLI (build-index / search)
-│   └── adapters/              # Multi-domain adapter layer
-│       ├── j_file_schemas.py  # J13/J14/J15/J16 typed schemas
-│       ├── pipeline_engine.py # HPVDPipelineEngine (J13→J16)
-│       ├── strategy_dispatcher.py
-│       └── strategies/        # FinanceStrategy, DocumentStrategy
-├── tests/                     # 72 automated tests
-├── docs/                      # Documentation
-├── hpvd_outputs/              # Example output files
-├── synthetic_data/            # Pre-generated test data
-├── pyproject.toml
+├── src/hpvd/                           # Core library
+│   ├── engine.py                       # HPVDEngine (finance market data)
+│   ├── trajectory.py                   # HPVDInputBundle (finance)
+│   ├── sparse_index.py                 # Regime inverted index (finance)
+│   ├── dense_index.py                  # FAISS wrapper
+│   ├── family.py                       # Family formation engine
+│   └── adapters/                       # Multi-domain adapter layer
+│       ├── knowledge_schemas.py        # PolicyObject, ProductObject, etc.
+│       ├── j_file_schemas.py           # J13/J14/J15/J16 typed schemas
+│       ├── pipeline_engine.py          # HPVDPipelineEngine (J13→J16)
+│       ├── strategy_dispatcher.py      # Domain → strategy routing
+│       └── strategies/
+│           ├── knowledge_strategy.py   # KnowledgeRetrievalStrategy (NEW)
+│           ├── finance_strategy.py     # FinanceRetrievalStrategy
+│           └── document_strategy.py    # DocumentRetrievalStrategy
+├── tests/                              # 147 automated tests
+│   ├── test_knowledge_retrieval.py     # K1–K7 + schema tests (NEW)
+│   └── ...                            # 72 existing tests
+├── docs/
+│   ├── HPVD_CORE.md                   # Technical reference (Manithy v1)
+│   ├── MANITHY_INTEGRATION.md         # Pipeline + J-files + NRB integration
+│   └── CHANGELOG.md                   # Status + roadmap
 └── requirements.txt
 ```
 
 ---
 
-## MVP Status
+## MVP Status (Manithy v1 Architecture)
 
 | Capability | Status |
 |-----------|--------|
-| Sparse + Dense retrieval | ✅ |
-| Multi-channel fusion | ✅ |
-| Analog Family formation | ✅ |
-| Outcome-blind contract | ✅ |
-| Serializer `hpvd_output_v1` | ✅ |
-| CLI entrypoint | ✅ |
-| Multi-domain adapter (J13→J16) | ✅ |
-| KL integration (v2) | ✅ |
-| 72 automated tests | ✅ |
+| KnowledgeRetrievalStrategy (sector filter + field match) | ✅ |
+| Mandatory rule_mapping retrieval | ✅ |
+| Provenance on all candidates | ✅ |
+| Sector-agnostic (Banking/Finance/Chatbot) | ✅ |
+| Multi-domain adapter (J13→J14→J15→J16) | ✅ |
+| HPVDPipelineEngine.build_knowledge_index() | ✅ |
+| Knowledge schemas (Policy/Product/RuleMapping/DocumentSchema) | ✅ |
+| Finance market data (FinanceRetrievalStrategy — legacy) | ✅ |
+| Document full-text (DocumentRetrievalStrategy) | ✅ |
+| KL REST integration | ✅ |
+| 147 automated tests (72 legacy + 13 knowledge + rest) | ✅ |
 
-**Not yet implemented:** Qdrant, REST API, PMR-DB, real market data. See [CHANGELOG.md](docs/CHANGELOG.md).
+**Not yet implemented:** NRBOrchestrator, Parser layer, PMR, Knowledge Builder, REST API. See [CHANGELOG.md](docs/CHANGELOG.md).
 
 ---
 
@@ -178,31 +254,9 @@ HPVD-M22/
 
 | File | Isi |
 |------|-----|
-| [docs/HPVD_CORE.md](docs/HPVD_CORE.md) | Technical reference: data model, distance formulas, search pipeline, quality gates, config, API |
-| [docs/MANITHY_INTEGRATION.md](docs/MANITHY_INTEGRATION.md) | Manithy pipeline (18 stages), J-files reference, VectorState format, KL integration |
-| [docs/CHANGELOG.md](docs/CHANGELOG.md) | MVP deliverables, roadmap (Phase 1–5), test history |
-
-**Interactive demos (notebooks):**
-- `HPVD_M22_Function_Walkthrough.ipynb` — walkthrough semua komponen core
-- `HPVD_KL_Integration_Demo_klv2.ipynb` — KL v2 integration demo
-- `HPVD_Test_Results_Visualization.ipynb` — visual explanation test scenarios
-
----
-
-## HPVD → PMR-DB Boundary
-
-```
-HPVD (retrieval, structural)      PMR-DB (probabilistic, decisional)
-────────────────────────          ──────────────────────────────────
-analog_families[]                  Probability computation
-  ├── members + confidence          Confidence intervals
-  ├── coherence metrics             Entropy / abstention decisions
-  └── uncertainty_flags             Calibrated forecasts
-retrieval_diagnostics
-metadata (schema: hpvd_output_v1)
-```
-
-**Key rule:** HPVD computes structural similarity. PMR-DB computes probabilities. Boundary: `hpvd_output_v1` JSON.
+| [docs/HPVD_CORE.md](docs/HPVD_CORE.md) | Technical reference: knowledge schemas, retrieval pipeline, input/output contract, API |
+| [docs/MANITHY_INTEGRATION.md](docs/MANITHY_INTEGRATION.md) | Manithy v1 pipeline, HPVD in NRB, J-files reference, VectorState (Core), KL integration |
+| [docs/CHANGELOG.md](docs/CHANGELOG.md) | Architecture pivot notes, MVP deliverables, roadmap |
 
 ---
 
@@ -210,9 +264,8 @@ metadata (schema: hpvd_output_v1)
 
 ```
 numpy>=1.26.0       faiss-cpu>=1.7.4
-pandas>=2.1.0       rank-bm25>=0.2.2
-scipy>=1.13.0       pytest>=7.0.0 (dev)
-scikit-learn>=1.4.0
+scipy>=1.13.0       rank-bm25>=0.2.2
+scikit-learn>=1.4.0 pytest>=7.0.0 (dev)
 ```
 
 Full pinned deps: `requirements.txt` | Editable install: `pip install -e ".[dev]"`
@@ -221,4 +274,4 @@ Full pinned deps: `requirements.txt` | Editable install: `pip install -e ".[dev]
 
 ## License
 
-MIT License — Project: Kalibry Finance / Matrix22
+MIT License — Project: Manithy v1 / HPVD-M22

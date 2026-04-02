@@ -2,9 +2,52 @@
 
 ---
 
-## v1.0.0-alpha1 — Current
+## v1.0.0-alpha2 — Manithy v1 Architecture Pivot — Current
 
-**Released:** January 2026
+**Released:** April 2026
+
+### Architectural Pivot: Kalibry Finance → Manithy v1
+
+Project ini mengalami architectural pivot dari "Kalibry Finance / Trajectory Intelligence" ke **Manithy v1 — Deterministic Attestation System**. Perubahan utama:
+
+| Dimensi | Sebelum (alpha1) | Sesudah (alpha2) |
+|---------|-----------------|-----------------|
+| Identity | Kalibry Finance / Matrix22 | Manithy v1 |
+| Peran HPVD | Cari analog historis (60×45 matrix) | Retrieve Knowledge (Policy/Product/RuleMapping) |
+| Posisi HPVD | Post-Core (triggered by J13 dari Core) | NRB (sebelum Core, sesudah Parser) |
+| Primary input | `HPVDInputBundle` (trajectory + DNA) | `observed_data + metadata.sector` dari Parser |
+| Primary output | `hpvd_output_v1` (analog families) | `candidates [{type, data, provenance}]` |
+| Domain scope | Finance-only (OHLCV) | Sector-agnostic (Banking/Finance/Chatbot) |
+
+### Capabilities Delivered (alpha2)
+
+| Capability | Status | Details |
+|-----------|--------|---------|
+| KnowledgeRetrievalStrategy | ✅ | Sector filter + field-based matching + mandatory rule_mapping |
+| Knowledge schemas | ✅ | `PolicyObject`, `ProductObject`, `RuleMappingObject`, `DocumentSchema`, `KnowledgeCandidate` |
+| HPVDPipelineEngine.build_knowledge_index() | ✅ | Convenience builder for Knowledge Layer corpus |
+| J13 Manithy v1 fields | ✅ | `observed_data` + `sector` fields added (backward compatible) |
+| Domain alias: `"knowledge"` | ✅ | New domain in `StrategyDispatcher` |
+| 13 new knowledge retrieval tests | ✅ | K1–K7 scenarios + schema unit tests |
+| docs/HPVD_CORE.md rewrite | ✅ | Primary interface = Knowledge objects. Finance = secondary subsection. |
+| docs/MANITHY_INTEGRATION.md update | ✅ | HPVD in NRB, new pipeline diagram, updated J-files reference |
+| .cursor/rules/hpvd_specs.mdc update | ✅ | J-file position, legacy finance boundary, KnowledgeCandidate contract |
+
+### Known Limitations (alpha2)
+
+- `KnowledgeRetrievalStrategy` uses in-memory storage (no persistent Knowledge Layer API yet)
+- Field-based matching is keyword-level only (no semantic/vector similarity yet)
+- `NRBOrchestrator` not yet implemented (HPVD called directly via HPVDPipelineEngine)
+- `PMR` and `KnowledgeBuilder` not yet implemented (NRB pipeline incomplete)
+- No Qdrant integration (FAISS in-memory only)
+- No REST/gRPC API
+- No real sector data (all testing uses synthetic/fixture data)
+
+---
+
+## v1.0.0-alpha1 — Finance Engine (Legacy)
+
+**Released:** January–March 2026
 
 ### Capabilities Delivered (MVP)
 
@@ -40,43 +83,53 @@
 
 ---
 
-## Roadmap
+## Roadmap (Manithy v1)
 
-### Phase 1 — Real Data: EODHD Integration
+### Phase 0 — Knowledge Layer Starter (CURRENT)
 
-Replace synthetic data dengan real market trajectories dari [eodhd.com](https://eodhd.com).
+Build dan validate Knowledge Layer retrieval dengan fixture data (Policy/Product/RuleMapping JSON files per sektor).
 
-Key tasks: EODHD data loader → trajectory builder → feature engineering (R45) → regime labeler → DNA constructor → validate T1–T8 on real data → index 10K trajectories.
+Key tasks (done): `KnowledgeRetrievalStrategy` → `KnowledgeIndex` → sector filter + field match → mandatory rule_mapping → 13 new tests passing.
 
-**Success criteria:** `search_families()` returns meaningful analog families on real AAPL/MSFT/GOOGL within <50ms.
+**Success criteria (done):** `KnowledgeRetrievalStrategy` retrieves correct candidates for Banking/Finance/Chatbot sectors. 147 tests passing.
 
-### Phase 2 — Qdrant Migration
+### Phase 1 — NRB Orchestrator + Parser
 
-Move dari in-memory FAISS ke persistent Qdrant untuk production readiness.
+Implement NRB pipeline: `NRBOrchestrator` → `ParserRegistry` → `ParserBanking` / `ParserChatbot` → HPVD → PMR → `KnowledgeBuilder`.
 
-Key tasks: `QdrantTrajectoryIndex` adapter → collection schema design → incremental indexing → benchmark vs FAISS at 10K/50K/100K.
+Key tasks: `NRBOrchestrator.run_nrb(request)` → Parser per sektor → HPVD → PMR (hypothesis builder) → KnowledgeBuilder (KNOWN/UNKNOWN/CONFLICT).
 
-**Success criteria:** Qdrant-backed `HPVDEngine` passes all 72 tests. Query latency <100ms at 100K.
+**Success criteria:** Full NRB pipeline dari raw request → epistemic state (KNOWN/UNKNOWN/CONFLICT).
 
-### Phase 3 — PMR-DB Handoff
+### Phase 2 — Knowledge Layer REST API
 
-Connect HPVD output ke Probabilistic Model Registry Database.
+Move dari in-memory JSON files ke persistent Knowledge Layer dengan REST API.
 
-Key tasks: `PmrAdapter` → family merging → entropy computation → abstention gating → end-to-end test.
+Key tasks: REST endpoint `GET /knowledge?sector=banking&type=policy` → versioning → snapshot pinning.
 
-**Success criteria:** PMR-DB receives `hpvd_output_v1` JSON dan returns calibrated probability distributions.
+**Success criteria:** `KnowledgeRetrievalStrategy` retrieves from REST API, tidak dari in-memory. Query latency <50ms.
 
-### Phase 4 — Production API
+### Phase 3 — Core Integration (t-1 Boundary)
 
-Expose HPVD+PMR as REST API.
+Connect NRB output (epistemic state) ke Core layer melalui boundary t-1.
 
-Key tasks: FastAPI `POST /search` → authentication → rate limiting → Docker packaging → Prometheus metrics.
+Key tasks: `Producer t-1` → freeze observed_state → `Adapter (CCR)` → `VectorState (J06)` → `V1` (Coverage) → `V3` (Decision) → `Evidence Pack`.
 
-**Success criteria:** API returns analog families in <1s under concurrent load, 99.9% uptime.
+**Success criteria:** End-to-end test: raw request → Parser → HPVD → PMR → KnowledgeBuilder → Core → Evidence Pack.
 
-### Phase 5 — Scale & Advanced Features
+### Phase 4 — Production API & Replay
 
-PQ/OPQ compressed embeddings → cross-encoder reranking → distributed sharding (10M+) → topological features → multi-asset classes.
+Expose Manithy system sebagai REST API dengan deterministic replay capability.
+
+Key tasks: FastAPI → authentication → `ReplayReport` → Docker packaging.
+
+### Phase 5 — Finance Market Data (Legacy Path)
+
+Jika Finance market data (OHLCV) tetap dibutuhkan: Real data pipeline dengan EODHD → Qdrant migration → cross-encoder reranking.
+
+Key tasks: EODHD data loader → trajectory builder → R45 features → `QdrantTrajectoryIndex`.
+
+**Success criteria:** `FinanceRetrievalStrategy` returns meaningful analog families on real AAPL/MSFT/GOOGL within <50ms.
 
 ---
 
@@ -86,5 +139,6 @@ PQ/OPQ compressed embeddings → cross-encoder reranking → distributed shardin
 |------|-------|-------|
 | 2026-01-15 | 29 passed | Early suite: synthetic scenarios (7) + sparse index (10) + trajectory (12) |
 | 2026-03-14 | 72 passed | Full suite: added contract (30) + embedding (7) + adapters + KL integration |
+| 2026-04-01 | 147 passed | Architecture pivot: added 13 knowledge retrieval tests (K1–K7 + schema). 72 legacy tests preserved. |
 
-> `docs/synthetic_test_results.md` (Jan 2026) deprecated dan digantikan oleh test suite 72 tests saat ini.
+> `docs/synthetic_test_results.md` (Jan 2026) deprecated dan digantikan oleh test suite saat ini.

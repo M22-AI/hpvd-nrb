@@ -1,61 +1,482 @@
 # HPVD Core — Technical Reference
 
-> **HPVD (Hybrid Probabilistic Vector Database)** adalah retrieval engine domain-agnostik yang mencari analog historis dan mengelompokkannya menjadi *Analog Families* dengan uncertainty flags. HPVD adalah komponen **structural similarity** — bukan predictor. Semua output bersifat *candidates-only*; downstream system (PMR-DB) yang bertanggung jawab atas probabilitas.
+> **HPVD (Hybrid Probabilistic Vector Database)** adalah knowledge retrieval engine domain-agnostik yang me-retrieve Policy, Product, Rule Mapping, dan Document Schema berdasarkan `observed_data` dari Parser. HPVD beroperasi di **NRB (Non-Binding Realm)** — sebelum Core, sesudah Parser. Semua output bersifat *candidates-only* (non-authoritative); PMR dan Knowledge Builder yang memproses lebih lanjut.
 
-**Version:** 1.0.0-alpha1 | **Project:** Matrix22 / Kalibry Finance
+**Version:** 1.0.0-alpha2 | **Project:** Manithy v1 — Deterministic Attestation System
 
 ---
 
 ## Daftar Isi
 
 1. [System Context](#1-system-context)
-2. [Data Model](#2-data-model)
-3. [Index Architecture](#3-index-architecture)
-4. [Distance & Similarity](#4-distance--similarity)
-5. [Search Pipeline](#5-search-pipeline)
+2. [Data Model — Knowledge Objects](#2-data-model--knowledge-objects)
+3. [Retrieval Architecture](#3-retrieval-architecture)
+4. [Input & Output Contract](#4-input--output-contract)
+5. [Retrieval Pipeline](#5-retrieval-pipeline)
 6. [Quality Gates & Test Scenarios](#6-quality-gates--test-scenarios)
 7. [Configuration Reference](#7-configuration-reference)
 8. [API Reference](#8-api-reference)
+9. [FinanceRetrievalStrategy Internals](#9-financeretrievalstrategy-internals)
 
 ---
 
 ## 1. System Context
 
 ```
-OHLCV Data
-    │
+[ INPUT ]
+    │  request + files
     ▼
-Embedding Engine (OHLCV → R45 features → 60×45 matrix → 256-d PCA)
+┌─────────────────────────────────────────────┐
+│ NRB — Non-Binding Realm                     │
+│                                             │
+│  Parser (sector-specific)                   │
+│  → observed_data + documents + metadata     │
+│       │                                     │
+│       ▼                                     │
+│  HPVD  ◄── Knowledge Layer                 │
+│  (sector filter + field match)              │
+│  → candidates [{type, data, provenance}]    │
+│       │                                     │
+│       ▼                                     │
+│  PMR  → hypotheses                          │
+│       │                                     │
+│       ▼                                     │
+│  Knowledge Builder                          │
+│  → epistemic state (KNOWN/UNKNOWN/CONFLICT) │
+└─────────────────────────────────────────────┘
     │
-    ▼
-┌───────────────────────────────────────┐
-│              HPVD                     │
-│  Sparse Filter → Dense Search →       │
-│  Hybrid Reranking → Family Formation  │
-└───────────────────────────────────────┘
-    │
-    ▼  hpvd_output_v1 (outcome-blind)
-PMR-DB  (probabilistic aggregation, abstention)
-    │
-    ▼
-REST API / LLM Render
+    ▼  Boundary t-1  (freeze observed state)
+┌─────────────────────────────────────────────┐
+│ RB CORE                                     │
+│  Adapter → VectorState → V1 → V3 → Decision│
+│  Evidence Pack                              │
+└─────────────────────────────────────────────┘
 ```
 
 **Key specifications:**
 
 | Parameter | MVP Target | Production Target |
 |-----------|-----------|-------------------|
-| Trajectory dimension | 60 × 45 (2,700 features) | Same |
-| Reduced embedding | 256-d (PCA) | 128–256-d |
+| Supported sectors | Banking, Finance, Chatbot | Unlimited |
+| Knowledge object types | 4 (Policy, Product, RuleMapping, DocumentSchema) | Extensible |
 | Query latency | < 50ms | < 20ms |
-| Database scale | 100K trajectories | 10M+ trajectories |
-| Recall@K | > 85% | > 90% |
+| Determinism | Required (same input → same candidates) | Same |
+| Traceability | Mandatory `provenance` per candidate | Same |
 
 ---
 
-## 2. Data Model
+## 2. Data Model — Knowledge Objects
 
-### 2.1 Trajectory: 60 × 45 Matrix
+HPVD mengelola dan me-retrieve empat tipe knowledge object. Semua disimpan sebagai JSON dan diidentifikasi dengan `sector` tag untuk filtering.
+
+### 2.1 Policy
+
+Aturan eligibility dan compliance yang berlaku untuk sebuah sektor/produk.
+
+```json
+{
+  "policy_id": "POLICY_SME_LOAN_V1",
+  "version": "1.0",
+  "sector": "banking",
+  "product_type": "sme_loan",
+  "eligibility_rules": {
+    "min_age": 21,
+    "max_age": 60,
+    "min_income": 3000000,
+    "max_dti_ratio": 0.4,
+    "min_business_age_months": 12
+  },
+  "compliance_rules": {
+    "must_have_npwp": true,
+    "must_not_blacklisted": true,
+    "must_not_bankrupt": true
+  },
+  "required_documents": [
+    "loan_application_form",
+    "identity_document",
+    "bank_statement",
+    "financial_statement"
+  ],
+  "provenance": {
+    "source": "bank_internal_policy",
+    "created_at": "2026-01-01"
+  }
+}
+```
+
+### 2.2 Product
+
+Informasi limit, tenor, bunga, dan aturan finansial dari sebuah produk.
+
+```json
+{
+  "product_id": "SME_LOAN_STANDARD",
+  "sector": "banking",
+  "loan_constraints": {
+    "min_amount": 5000000,
+    "max_amount": 500000000,
+    "tenor_options": [12, 24, 36, 60],
+    "interest_type": "fixed"
+  },
+  "financial_rules": {
+    "max_installment_to_income_ratio": 0.4,
+    "late_penalty_rate": 0.02
+  },
+  "provenance": {
+    "source": "product_catalog"
+  }
+}
+```
+
+### 2.3 Rule Mapping
+
+Mapper antara field-field di observed state dengan requirement di V1 (Coverage) dan V3 (Decision) di Core layer.
+
+```json
+{
+  "mapping_id": "RULE_MAP_SME_LOAN_V1",
+  "sector": "banking",
+  "v1_required_fields": [
+    "loan_amount",
+    "loan_contract_date",
+    "beneficiary_name",
+    "beneficiary_tax_code",
+    "doc_application_present",
+    "doc_financing_contract_present"
+  ],
+  "v3_required_fields": [
+    "loan_amount",
+    "income",
+    "dti_ratio",
+    "guarantee_amount",
+    "claim_amount"
+  ],
+  "document_requirements": {
+    "loan_application_form": "doc_application_present",
+    "financial_statement": "doc_financial_statement_present",
+    "bank_statement": "doc_bank_statement_present"
+  },
+  "consistency_rules": [
+    {"rule": "claim_amount <= guarantee_amount"},
+    {"rule": "loan_amount <= max_amount_product"}
+  ],
+  "provenance": {
+    "source": "core_binding_definition"
+  }
+}
+```
+
+### 2.4 Document Schema
+
+Struktur field yang diharapkan dari sebuah tipe dokumen. Dipakai oleh Parser dan HPVD untuk validasi availability.
+
+```json
+{
+  "doc_type": "loan_application_form",
+  "sector": "banking",
+  "fields": ["applicant_name", "applicant_age", "income", "loan_amount", "tenor"],
+  "required": ["applicant_name", "income", "loan_amount"],
+  "provenance": {
+    "source": "bank_form_template"
+  }
+}
+```
+
+### 2.5 Policy Feature Index (Optional)
+
+Index tambahan untuk mempercepat field-based matching — memetakan nama field ke knowledge object yang relevan.
+
+```json
+{
+  "index_id": "POLICY_FEATURE_INDEX",
+  "sector": "banking",
+  "features": {
+    "income": ["policy_sme_loan_v1"],
+    "loan_amount": ["product_sme_loan_standard"],
+    "documents": ["policy_sme_loan_v1"]
+  }
+}
+```
+
+---
+
+## 3. Retrieval Architecture
+
+### 3.1 KnowledgeIndex
+
+`KnowledgeIndex` adalah in-memory store yang menyimpan semua knowledge objects, diorganisir per sektor. Mendukung lookup O(1) berdasarkan sektor, dan field matching O(F) di mana F = jumlah field di `observed_data`.
+
+| Operation | Complexity | Keterangan |
+|-----------|-----------|------------|
+| `add()` | O(1) | Insert ke sector bucket |
+| `filter_by_sector()` | O(1) | Direct bucket lookup |
+| `match_by_fields()` | O(F × K) | F = observed fields, K = candidates per type |
+| `get_rule_mapping()` | O(1) | Mandatory — always retrieved |
+
+**Memory:** Proporsi terhadap ukuran knowledge corpus. Typical starter: < 1 MB.
+
+### 3.2 Retrieval Strategy: KnowledgeRetrievalStrategy
+
+`KnowledgeRetrievalStrategy` mengimplementasikan `RetrievalStrategy` ABC dengan domain `"knowledge"`.
+
+| Step | Nama | Deskripsi |
+|------|------|-----------|
+| 1 | Sector Filter | Ambil semua knowledge objects dengan `sector` == `metadata.sector` |
+| 2 | Field-Based Matching | Cocokkan field-field di `observed_data` dengan `eligibility_rules` / `loan_constraints` |
+| 3 | Mandatory Retrieval | Selalu sertakan `rule_mapping` yang cocok dengan sektor |
+| 4 | Format Output | Wrap tiap object ke `KnowledgeCandidate({type, data, provenance})` |
+
+### 3.3 Strategy Dispatcher
+
+`StrategyDispatcher` merutekan query berdasarkan `scope.domain` dari J13. Untuk knowledge retrieval, `domain = "knowledge"`. Finance market data tetap tersedia via `domain = "finance"` (lihat Section 9).
+
+---
+
+## 4. Input & Output Contract
+
+### 4.1 Input (dari Parser via NRB Orchestrator)
+
+```json
+{
+  "observed_data": {
+    "applicant_name": "Budi Santoso",
+    "loan_amount": 50000000,
+    "income": 10000000,
+    "nik": "1234567890123456"
+  },
+  "documents": [
+    {"doc_type": "loan_application_form", "present": true},
+    {"doc_type": "bank_statement", "present": true},
+    {"doc_type": "financial_statement", "present": false}
+  ],
+  "metadata": {
+    "sector": "banking",
+    "parser_version": "parser_banking_v1"
+  }
+}
+```
+
+**Dalam pipeline adapter (HPVDPipelineEngine)**, input dikemas sebagai J13:
+```json
+{
+  "query_id": "REQ_LOAN_0001",
+  "scope": {"domain": "knowledge"},
+  "observed_data": {"applicant_name": "Budi Santoso", "loan_amount": 50000000},
+  "sector": "banking"
+}
+```
+
+### 4.2 Output (ke PMR)
+
+```json
+{
+  "candidates": [
+    {
+      "type": "policy",
+      "data": {
+        "policy_id": "POLICY_SME_LOAN_V1",
+        "required_documents": ["loan_application_form", "identity_document", "bank_statement", "financial_statement"],
+        "eligibility_rules": {"min_income": 3000000}
+      },
+      "provenance": {"source": "bank_internal_policy", "created_at": "2026-01-01"}
+    },
+    {
+      "type": "product",
+      "data": {
+        "product_id": "SME_LOAN_STANDARD",
+        "constraints": {"max_amount": 500000000}
+      },
+      "provenance": {"source": "product_catalog"}
+    },
+    {
+      "type": "rule_mapping",
+      "data": {
+        "mapping_id": "RULE_MAP_SME_LOAN_V1",
+        "v1_required_fields": ["loan_amount", "beneficiary_name", "loan_contract_date"],
+        "document_requirements": {"loan_application_form": true, "bank_statement": true}
+      },
+      "provenance": {"source": "core_binding_definition"}
+    }
+  ]
+}
+```
+
+**Invariants yang harus dijaga:**
+- `rule_mapping` **selalu** ada dalam output (mandatory).
+- Setiap candidate **harus** punya `type` dan `provenance`.
+- HPVD **tidak boleh** mengubah isi `observed_data`.
+- HPVD **tidak boleh** mengambil keputusan (allow/deny/conflict).
+
+---
+
+## 5. Retrieval Pipeline
+
+```
+Input (observed_data + metadata.sector)
+    │
+    ▼  Step 1: Sector Filter                    ~1ms
+    │  knowledge_index.filter_by_sector(sector)
+    │  → subset of all knowledge objects for this sector
+    │
+    ▼  Step 2: Field-Based Matching             ~5ms
+    │  query_builder.extract_keywords(observed_data)
+    │  → ["loan_amount", "income", ...]
+    │  matcher.find(keywords, policy_feature_index)
+    │  → relevant Policy + Product objects
+    │
+    ▼  Step 3: Mandatory Retrieval              ~1ms
+    │  knowledge_index.get_rule_mapping(sector)
+    │  → rule_mapping object (always included)
+    │
+    ▼  Step 4: Format as KnowledgeCandidates    ~1ms
+    │  wrap each object → {type, data, provenance}
+    │
+Output: candidates list                total ~8ms
+```
+
+### Fallback logic
+
+| Condition | Action |
+|-----------|--------|
+| Sector not found in Knowledge Layer | Return empty candidates (log warning) |
+| No policy matches observed fields | Return rule_mapping only (mandatory) |
+| Knowledge Layer empty | Return empty candidates + diagnostic flag |
+
+---
+
+## 6. Quality Gates & Test Scenarios
+
+### 6.1 Knowledge Retrieval Test Scenarios
+
+| Test | Scenario | Yang Divalidasi |
+|------|----------|----------------|
+| K1 | Sector match | Banking query → hanya banking objects dikembalikan |
+| K2 | Field match | `loan_amount` di observed → SME loan policy & product dikembalikan |
+| K3 | Mandatory rule_mapping | Selalu ada rule_mapping meski field match kosong |
+| K4 | Provenance completeness | Semua candidates punya `type` dan `provenance` |
+| K5 | Empty sector | Sector tidak dikenal → empty candidates, tidak crash |
+| K6 | Determinism | Input sama → candidates sama (urutan dan isi) |
+| K7 | Pipeline integration | J13 → HPVDPipelineEngine → J14(knowledge) → J15 → J16 |
+
+### 6.2 Quality Metrics Targets
+
+| Metric | Target |
+|--------|--------|
+| Rule mapping recall | 100% (always returned) |
+| Sector precision | 100% (no cross-sector leakage) |
+| Query latency P95 | < 50ms |
+| Provenance coverage | 100% (every candidate has provenance) |
+| Determinism | Bitwise identical for same input |
+
+### 6.3 Test Coverage (72 existing + new)
+
+| File | Tests | Coverage |
+|------|-------|---------|
+| `test_contract.py` | 30 | Bundle validation, embedding lifecycle, serializer round-trip |
+| `test_synthetic_scenarios.py` | 10 | T1–T8 epistemic scenarios (finance domain) |
+| `test_embedding.py` | 7 | PCA fit/transform, save/load, determinism |
+| `test_sparse_index.py` | 10 | Add/remove/filter, regime match scoring |
+| `test_trajectory.py` | 13 | Trajectory creation, validation, DNA handling |
+| `test_adapters.py` + `test_kl_integration.py` | 2 | Pipeline adapter, KL integration |
+| `test_knowledge_retrieval.py` | 7+ | K1–K7 knowledge retrieval scenarios (new) |
+
+---
+
+## 7. Configuration Reference
+
+### Knowledge Layer Parameters
+
+| Parameter | Default | Keterangan |
+|-----------|---------|------------|
+| `default_k` | 10 | Max candidates per type |
+| `mandatory_types` | `["rule_mapping"]` | Always included in output |
+| `sector_strict` | `True` | Reject cross-sector objects |
+| `enable_feature_index` | `True` | Gunakan policy_feature_index jika tersedia |
+
+### Legacy Finance Parameters (FinanceRetrievalStrategy only)
+
+| Parameter | Default | Keterangan |
+|-----------|---------|------------|
+| `embedding_dim` | 256 | PCA output dimension |
+| `trajectory_window` | 60 | Hari per trajectory |
+| `feature_count` | 45 | R45 features |
+| `min_aci` | 0.7 | Minimum ACI threshold |
+
+### Environment Variables
+
+```bash
+HPVD_DEFAULT_K=10
+HPVD_SECTOR_STRICT=true
+HPVD_MANDATORY_TYPES=rule_mapping
+```
+
+---
+
+## 8. API Reference
+
+### Primary API — Knowledge Retrieval
+
+```python
+from hpvd.adapters import HPVDPipelineEngine
+from hpvd.adapters.strategies import KnowledgeRetrievalStrategy
+
+# Build knowledge index dari corpus
+strategy = KnowledgeRetrievalStrategy()
+strategy.build_index(knowledge_corpus)   # List[dict] — Policy/Product/RuleMapping/DocumentSchema
+
+# Via pipeline engine
+pipeline = HPVDPipelineEngine()
+pipeline.register_strategy(strategy)
+pipeline.build_knowledge_index(knowledge_corpus)
+
+# Process query
+result = pipeline.process_query({
+    "query_id": "REQ_001",
+    "scope": {"domain": "knowledge"},
+    "observed_data": {"loan_amount": 50000000, "income": 10000000},
+    "sector": "banking"
+})
+# result.j14.candidates  → KnowledgeCandidate list
+# result.j16.families    → grouped by type
+```
+
+### Multi-Strategy API (Knowledge + Finance)
+
+```python
+from hpvd.adapters.strategies import KnowledgeRetrievalStrategy, FinanceRetrievalStrategy
+
+pipeline = HPVDPipelineEngine()
+pipeline.register_strategy(KnowledgeRetrievalStrategy())
+pipeline.register_strategy(FinanceRetrievalStrategy(config))
+
+# Build indexes
+pipeline.build_knowledge_index(knowledge_corpus)
+pipeline.build_finance_index(trajectory_bundles)
+
+# Dispatch is automatic based on scope.domain in J13
+result_knowledge = pipeline.process_query({..., "scope": {"domain": "knowledge"}})
+result_finance   = pipeline.process_query({..., "scope": {"domain": "finance"}})
+```
+
+### CLI
+
+```powershell
+# Build knowledge index dari folder JSON files
+python -m src.hpvd.cli build-knowledge-index --corpus data/knowledge/ --output artifacts/
+
+# Search (knowledge domain)
+python -m src.hpvd.cli search --index artifacts/ --domain knowledge --query query.json
+```
+
+---
+
+## 9. FinanceRetrievalStrategy Internals
+
+> **Scope:** Section ini hanya relevan untuk use case **capital markets / OHLCV time series**. Bukan primary HPVD interface.
+
+`FinanceRetrievalStrategy` adalah domain strategy yang membungkus `HPVDEngine` untuk pencarian analog historis berbasis trajectory matrix.
+
+### 9.1 Trajectory: 60 × 45 Matrix
 
 Setiap trajectory merepresentasikan **60 hari trading × 45 engineered features (R45)**:
 
@@ -68,32 +489,10 @@ Setiap trajectory merepresentasikan **60 hari trading × 45 engineered features 
 | E | Regime | 5 | Trend/vol/momentum/structure regimes |
 | **Total** | | **45** | |
 
-### 2.2 Regime Encoding
+### 9.2 HPVDInputBundle — Finance-Only Contract
 
-Regime adalah **3-tuple `(trend, volatility, structural)`** dengan nilai `{-1, 0, +1}`:
+`HPVDInputBundle` adalah input container untuk `FinanceRetrievalStrategy`. Tidak digunakan oleh `KnowledgeRetrievalStrategy`.
 
-| Regime | Tuple | Description |
-|--------|-------|-------------|
-| R1 | `(1, 0, 1)` | Stable expansion |
-| R2 | `(-1, 0, -1)` | Stable contraction |
-| R3 | `(0, 1, 1)` | Compression / crowding |
-| R4 | `(0, 0, 0)` | Transitional / ambiguous |
-| R5 | `(1, 1, -1)` | Structural stress |
-| R6 | — | Novel / unseen |
-
-27 kombinasi regime tersedia (`3³`). Sparse index meng-cover semua kombinasi dalam O(1).
-
-### 2.3 HPVDInputBundle — Outcome-Blind Contract
-
-`HPVDInputBundle` adalah input container resmi. Field-field berikut **TIDAK BOLEH** ada di dalam bundle:
-
-- `label_h1`, `label_h5` — outcome labels
-- `return_h1`, `return_h5` — actual returns
-- Apapun yang merupakan *future information*
-
-Validasi dilakukan via `HPVDInputBundle.validate()`. Pelanggaran diblokir.
-
-**Bundle JSON format:**
 ```json
 {
   "trajectory": [[0.1, 0.2, "..."], ["..."]],
@@ -108,298 +507,24 @@ Validasi dilakukan via `HPVDInputBundle.validate()`. Pelanggaran diblokir.
 }
 ```
 
----
-
-## 3. Index Architecture
-
-### 3.1 Sparse Regime Index
-
-`SparseRegimeIndex` — inverted index berbasis regime tuple untuk pre-filtering O(1).
-
-| Operation | Complexity | Keterangan |
-|-----------|-----------|------------|
-| `add()` | O(1) | Insert ke 3 index sekaligus |
-| `filter_by_regime()` | O(27) = O(1) | Hanya 27 kombinasi regime |
-| `combined_filter()` | O(F × K) | F = jumlah filter aktif |
-| `get_regime_match_score()` | O(1) | Per-dimension scoring |
-
-**Memory:** ~230 bytes per trajectory → 23 MB untuk 100K trajectories.
-
-Adjacent regime matching (`allow_adjacent=True`): match `±1` per dimensi — contoh, query R1 `(1,0,1)` juga match `(1,0,0)`, `(0,0,1)`, `(1,1,1)`, dll.
-
-### 3.2 Dense Index (FAISS)
-
-`DenseTrajectoryIndex` — FAISS wrapper dengan cosine similarity pada 256-d PCA embeddings.
-
-| Scale | Index Type | Latency | Recall |
-|-------|-----------|---------|--------|
-| < 100K | `IndexFlatIP` | < 5ms | 100% |
-| 100K – 1M | `IndexIVFFlat` | < 10ms | ~95% |
-| 1M – 10M | `IndexHNSW` | < 15ms | ~92% |
-| > 10M | `IndexHNSW + PQ` | < 20ms | ~90% |
-
-**MVP:** `IndexIVFFlat` (approximate, ~95% recall, < 10ms pada 100K).
-
-### 3.3 Cognitive DNA (16-d)
-
-DNA adalah **phase identity vector 16-dimensi** yang merepresentasikan evolusi temporal trajectory. Similarity dihitung sebagai kombinasi cosine + L2 + phase proximity, lalu di-fuse ke dalam distance akhir.
-
----
-
-## 4. Distance & Similarity
-
-### 4.1 Hybrid Distance Formula
+### 9.3 Hybrid Distance Formula
 
 ```
-Component Distances:
-  d_euc  = ||vec(A) - vec(B)||₂
-  d_cos  = 1 - cos(vec(A), vec(B))
-  d_temp = Σᵢ wᵢ ||Aᵢ - Bᵢ||₂    (wᵢ = 0.95^(59-i) / Σⱼ 0.95^(59-j))
-
-Normalization:
-  d̂_euc  = d_euc  / (√2700 × 2)
-  d̂_cos  = d_cos  / 2
-  d̂_temp = d_temp / (√45 × 2)
-
-Regime Match Score:
-  regime_match = mean([1 - |Rₐᵢ - Rᵦᵢ| / 2  for i in 0,1,2])
-
-Combined:
-  base        = 0.3 × d̂_euc + 0.4 × d̂_cos + 0.3 × d̂_temp
-  penalty     = (1 - regime_match) × 0.2
-  hybrid_dist = base × (1 + penalty)
-
-Fusion with DNA:
-  fused_dist  = 0.7 × hybrid_dist + 0.3 × dna_distance
-  confidence  = max(0, 1 - min(fused_dist, 1))
+fused_dist  = 0.7 × hybrid_dist + 0.3 × dna_distance
+confidence  = max(0, 1 - min(fused_dist, 1))
 ```
 
-### 4.2 Analog Cohesion Index (ACI)
-
-```
-ACI = 1 - (mean(distances) + std(distances)) / 2
-```
-
-- ACI tinggi → analog saling mirip → hasil lebih reliable
-- Target: ACI > 0.7 untuk 80% query
-
-### 4.3 Abstention Rule
-
-```
-entropy = -p × log₂(p) - (1-p) × log₂(1-p)
-if entropy > 0.9 → abstain (sinyal ke PMR-DB: "LOW_CONFIDENCE")
-```
-
----
-
-## 5. Search Pipeline
-
-```
-Query (HPVDInputBundle)
-    │
-    ▼  Stage 1: Sparse Filtering           ~2ms
-    │  regime_index.filter(allow_adjacent=True)
-    │  → 30K–50K candidate IDs
-    │
-    ▼  Stage 2: Dense Retrieval (FAISS)    ~15ms
-    │  dense_index.search_with_filter(k=75)
-    │  → 75 ranked candidates
-    │
-    ▼  Stage 3: Hybrid Reranking           ~5ms
-    │  distance_calc.compute() per candidate
-    │  sort by fused_dist, take top-K
-    │
-    ▼  Stage 4: Family Formation           ~2ms
-    │  group by regime → Analog Families
-    │  compute coherence + uncertainty flags
-    │
-HPVD_Output (hpvd_output_v1)              total ~24ms
-```
-
-### Fallback logic
-
-Jika sparse filter menghasilkan terlalu sedikit kandidat:
-1. Relax ke trend-only filter
-2. Relax ke no filter (semua trajectories)
-
-### Output Schema
-
-```json
-{
-  "metadata": {
-    "hpvd_version": "v1",
-    "query_id": "...",
-    "schema_version": "hpvd_output_v1",
-    "timestamp": "2024-01-15T00:00:00+00:00"
-  },
-  "retrieval_diagnostics": {
-    "candidates_considered": 200,
-    "candidates_retrieved": 100,
-    "candidates_admitted": 45,
-    "families_formed": 3,
-    "latency_ms": 12.5
-  },
-  "analog_families": [
-    {
-      "family_id": "AF_001",
-      "members": [
-        {"trajectory_id": "hist_034", "confidence": 0.57}
-      ],
-      "coherence": {"mean_confidence": 0.55, "dispersion": 0.03, "size": 15},
-      "structural_signature": {
-        "phase": "stable_expansion",
-        "avg_K": 5.2,
-        "avg_LTV": 0.3
-      },
-      "uncertainty_flags": {
-        "phase_boundary": false,
-        "weak_support": false,
-        "partial_overlap": false
-      }
-    }
-  ]
-}
-```
-
----
-
-## 6. Quality Gates & Test Scenarios
-
-### 6.1 Synthetic Test Scenarios (T1–T8)
-
-| Test | Scenario | Yang Divalidasi |
-|------|----------|----------------|
-| T1 | Clean Repetition | Same regime (R1) → 1 dominant family, high coherence |
-| T2 | Surface Similarity Trap | R1 vs R3 similar at endpoint → NOT merged |
-| T3 | Scale Invariance | Same phase, different amplitude → still grouped |
-| T4 | Transitional Ambiguity | R4 between R1 and R5 → ≥2 families, uncertainty flagged |
-| T5 | Novel Structure | Unseen R6 → no families OR all `weak_support=True` |
-| T6 | Deterministic Replay | Same query twice → bitwise identical output |
-| T7 | Overlapping Regimes | Mixed R1/R3/R5 pool → no crash, valid structure |
-| T8 | Noise Stress | R1 with escalating noise → confidence decays gradually |
-
-### 6.2 Quality Metrics Targets
-
-| Metric | Target | Source |
-|--------|--------|--------|
-| ACI | > 0.7 untuk 80% query | Sprint Plan |
-| Regime Coherence (RC) | > 0.65 | Sprint Plan |
-| ECE (calibration) | < 8% | Sprint Plan |
-| Brier Score | < 0.18 | Sprint Plan |
-| Query latency P95 | < 50ms | Architecture spec |
-| Abstention trigger | entropy > 0.9 | Sprint Plan |
-
-### 6.3 Test Coverage (72 tests)
-
-| File | Tests | Coverage |
-|------|-------|---------|
-| `test_contract.py` | 30 | Bundle validation, embedding lifecycle guard, serializer round-trip |
-| `test_synthetic_scenarios.py` | 10 | T1–T8 epistemic scenarios |
-| `test_embedding.py` | 7 | PCA fit/transform, save/load, determinism |
-| `test_sparse_index.py` | 10 | Add/remove/filter, regime match scoring |
-| `test_trajectory.py` | 13 | Trajectory creation, validation, DNA handling |
-| `test_adapters.py` + `test_kl_integration.py` | 2 | Pipeline adapter, KL integration |
-
----
-
-## 7. Configuration Reference
-
-### Default Parameters
-
-| Parameter | Default | Keterangan |
-|-----------|---------|------------|
-| `default_k` | 25 | Jumlah neighbors |
-| `search_k_multiplier` | 3 | Oversample sebelum reranking |
-| `min_candidates` | 100 | Minimum sparse filter results |
-| `weight_euclidean` | 0.3 | Euclidean weight |
-| `weight_cosine` | 0.4 | Cosine weight |
-| `weight_temporal` | 0.3 | Temporal weight |
-| `regime_penalty` | 0.2 | Regime mismatch penalty |
-| `temporal_decay` | 0.95 | Decay factor untuk temporal weights |
-| `embedding_dim` | 256 | PCA output dimension |
-| `trajectory_window` | 60 | Hari per trajectory |
-| `feature_count` | 45 | R45 features |
-| `min_aci` | 0.7 | Minimum ACI threshold |
-| `abstention_entropy` | 0.9 | Entropy abstention threshold |
-
-### Environment Variables
-
-```bash
-HPVD_DEFAULT_K=25
-HPVD_SEARCH_MULTIPLIER=3
-HPVD_MIN_CANDIDATES=100
-HPVD_WEIGHT_EUCLIDEAN=0.3
-HPVD_WEIGHT_COSINE=0.4
-HPVD_WEIGHT_TEMPORAL=0.3
-HPVD_REGIME_PENALTY=0.2
-HPVD_INDEX_TYPE=ivf_flat       # flat_ip | ivf_flat | hnsw
-HPVD_MIN_ACI=0.5
-```
-
----
-
-## 8. API Reference
-
-### Python API
+### 9.4 Legacy API (untuk FinanceRetrievalStrategy)
 
 ```python
 from hpvd import HPVDEngine, HPVDInputBundle, HPVD_Output
 
-# Build index
 engine = HPVDEngine()
-engine.build_from_bundles(list_of_bundles)   # List[HPVDInputBundle]
-
-# Search
+engine.build_from_bundles(list_of_bundles)
 output: HPVD_Output = engine.search_families(query_bundle)
-
-# Serialize
-d = output.to_dict()             # → dict
-j = output.to_json(indent=2)     # → JSON string
-
-# Deserialize
-restored = HPVD_Output.from_dict(d)
+d = output.to_dict()
 ```
-
-### Multi-Domain Pipeline API (J13 → J16)
-
-```python
-from hpvd.adapters import HPVDPipelineEngine
-from hpvd.adapters.strategies import FinanceRetrievalStrategy, DocumentRetrievalStrategy
-
-pipeline = HPVDPipelineEngine()
-pipeline.register_strategy(FinanceRetrievalStrategy(config))
-pipeline.register_strategy(DocumentRetrievalStrategy())
-
-# Build indexes per domain
-pipeline.build_finance_index(trajectory_bundles)
-pipeline.build_document_index(document_chunks)
-
-# Process J13 — strategy auto-selected by domain
-output = pipeline.process_query(j13_dict)
-# output.j14, output.j15, output.j16
-```
-
-### CLI
-
-```powershell
-# Build index dari folder berisi HPVDInputBundle JSON files
-python -m src.hpvd.cli build-index --bundles data/bundles/ --output artifacts/
-
-# Search (dari file atau stdin)
-python -m src.hpvd.cli search --index artifacts/ --query query_bundle.json
-cat query_bundle.json | python -m src.hpvd.cli search --index artifacts/
-```
-
-### Legacy API (Deprecated)
-
-```python
-engine.build(trajectories)          # → gunakan build_from_bundles()
-engine.search(trajectory)           # → gunakan search_families()
-engine.search_families(trajectory)  # → gunakan HPVDInputBundle, bukan Trajectory
-```
-
-Semua legacy method masih berfungsi tapi emit `DeprecationWarning`.
 
 ---
 
-*Version 1.0.0-alpha1 | Matrix22 / Kalibry Finance*
+*Version 1.0.0-alpha2 | Manithy v1 — Deterministic Attestation System*

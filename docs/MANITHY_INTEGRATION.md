@@ -1,279 +1,367 @@
 # Manithy Integration Guide
 
-> Dokumen ini menjelaskan peran HPVD dalam pipeline **Manithy** — sistem reasoning multi-domain (Finance, Chatbot/Refund, Banking/Loan) — mencakup arsitektur multi-domain, J-files reference, VectorState format, dan integrasi Knowledge Layer.
+> Dokumen ini menjelaskan peran HPVD dalam pipeline **Manithy v1** — sistem Deterministic Attestation multi-sektor (Banking, Finance, Chatbot) — mencakup posisi HPVD di NRB, arsitektur multi-strategy, J-files reference, VectorState format (Core layer), dan integrasi Knowledge Layer.
 
 ---
 
 ## Daftar Isi
 
 1. [Manithy Pipeline Overview](#1-manithy-pipeline-overview)
-2. [HPVD dalam Pipeline (Stage 11–16)](#2-hpvd-dalam-pipeline-stage-1116)
+2. [HPVD dalam Pipeline — NRB Stage](#2-hpvd-dalam-pipeline--nrb-stage)
 3. [Multi-Domain Strategy Architecture](#3-multi-domain-strategy-architecture)
 4. [J-Files Reference](#4-j-files-reference)
-5. [VectorState Format (J06)](#5-vectorstate-format-j06)
-6. [KL Integration](#6-kl-integration)
+5. [VectorState Format (Core Layer — J06)](#5-vectorstate-format-core-layer--j06)
+6. [Knowledge Layer Integration](#6-knowledge-layer-integration)
 
 ---
 
 ## 1. Manithy Pipeline Overview
 
-Pipeline Manithy terdiri dari **18 stage** yang mentransformasi input mentah menjadi penjelasan berbasis structured reasoning.
+Pipeline Manithy v1 tersusun menjadi dua domain besar yang dipisahkan oleh boundary `t-1`:
 
 ```
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│ 1. INPUT     │──▶│ 2. SNAPSHOT  │──▶│ 3. METADATA  │──▶│ 4. CCR       │
-│  (Adapter)   │   │  (Immutable) │   │  (J01)       │   │  (J03)       │
-└──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘
-                                                                 │
-       ┌─────────────────────────────────────────────────────────┘
-       ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│ 5. PROJECT   │──▶│ 6. COVERAGE  │──▶│ 7. RULES     │──▶│ 8. SEAL      │
-│  (J05+J06)   │   │  V1 (J08)   │   │  V3 (J09)    │   │  (J11/J12)   │
-└──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘
-                                                                 │
-       ┌─────────────────────────────────────────────────────────┘
-       ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│ 9. FINGERPRNT│──▶│10. REPLAYABLE│──▶│11. SERVING   │──▶│12. KNOWLEDGE │
-│  (J20)       │   │  (Audit)     │   │ ADAPTER(J13) │   │  SNAPSHOT    │
-└──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘
-                                                                 │
-       ┌─────────────────────────────────────────────────────────┘
-       ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│13. HPVD      │──▶│14. PHASE     │──▶│15. ANALOG    │──▶│16. PMR GRAPH │
-│ RETRIEVAL(J14)   │ FILTER (J15) │   │ FAMILY (J16) │   │  (J17)       │
-└──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘
-                                                                 │
-       ┌─────────────────────────────────────────────────────────┘
-       ▼
-┌──────────────┐   ┌──────────────┐
-│17. REASONING │──▶│18. LLM RENDER│
-│ OUTPUT (J18) │   │  (J19)       │
-└──────────────┘   └──────────────┘
+[ INPUT ]
+    │  request_id + sector + files
+    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ NRB — Non-Binding Realm                                         │
+│                                                                 │
+│  ┌────────────────┐    ┌──────────────────┐                     │
+│  │ 1. Parser      │───▶│ 2. HPVD          │                     │
+│  │ (sector-spec)  │    │ (knowledge       │◀── Knowledge Layer   │
+│  │                │    │  retrieval)      │    Policy/Product/   │
+│  │ → observed_data│    │ → candidates     │    RuleMapping       │
+│  └────────────────┘    └────────┬─────────┘                     │
+│                                 │                               │
+│                        ┌────────▼─────────┐                     │
+│                        │ 3. PMR           │                     │
+│                        │ → hypotheses     │                     │
+│                        └────────┬─────────┘                     │
+│                                 │                               │
+│                        ┌────────▼─────────┐                     │
+│                        │ 4. Knowledge     │                     │
+│                        │    Builder       │                     │
+│                        │ KNOWN/UNKNOWN/   │                     │
+│                        │ CONFLICT         │                     │
+│                        └────────┬─────────┘                     │
+└─────────────────────────────────┼───────────────────────────────┘
+                                  │
+                     ┌────────────▼──────────────┐
+                     │ BOUNDARY  t-1             │
+                     │ (freeze observed_state)   │
+                     └────────────┬──────────────┘
+                                  │
+┌─────────────────────────────────▼───────────────────────────────┐
+│ RB CORE — Binding Domain                                        │
+│                                                                 │
+│  J01 → J02 → J03(CCR) → J04 → J05(StructuredCtx)              │
+│  → J06(VectorState) → J07(Trajectory)                          │
+│  → J08(V1 Coverage) → J09(EFV) → J10(V3 Decision)             │
+│  → J11(EvidencePack) → J12(FactsEnvelope)                      │
+│  → J13(PostCoreQuery — downstream trigger)                     │
+│                                                                 │
+│  Multi-Manifold + Geometry (DGG/AIR) setelah J06               │
+└─────────────────────────────────────────────────────────────────┘
+                                  │
+                     ┌────────────▼──────────────┐
+                     │ OUTPUT                    │
+                     │ Decision + Evidence Pack  │
+                     └───────────────────────────┘
 ```
 
-**Ringkasan stage per J-file:**
+**Ringkasan komponen per layer:**
 
-| Stage | J-File | Deskripsi |
-|-------|--------|-----------|
-| 3 | J01 | CommitBoundaryEvent — identitas kasus + boundary |
-| 3 | J02 | PackInit — diagnostic/opsional |
-| 4 | J03 | CCR (Canonical Case Record) — kasus terstruktur |
-| 4 | J04 | CaptureReceipt — opsional |
-| 5 | J05 | StructuredContext — authority + intent extracted |
-| 5 | J06 | VectorState — representasi vektor lengkap |
-| 5 | J07 | Trajectory tracking — opsional |
-| 6 | J08 | L1_Admissibility — `COVERED` / `UNCOVERED` |
-| 7 | J09 | EligibilityFeatureVector (EFV) — domain features |
-| 7 | J10 | AuthorityAttestationToken — `PERMIT`/`BLOCK`/`REQUIRE_OVERRIDE` |
-| 8 | J11 | EvidencePack — merkle tree |
-| 8 | J12 | V2_FactsEnvelope — facts + pack_ref |
-| 11 | J13 | PostCoreQuery — trigger HPVD |
-| 13 | J14 | HPVD_RetrievalRaw — candidates + similarity |
-| 14 | J15 | PhaseFilteredSet — accepted/rejected |
-| 15 | J16 | AnalogFamilyAssignment — family + probability |
-| 16 | J17 | PMR_HypothesisGraph — support/contradiction nodes |
-| 17 | J18 | StructuredReasoningOutput — final reasoning object |
-| 18 | J19 | Renderer_Output — LLM explanation text |
-| 9/10 | J20 | ReplayReport — audit verification |
+| Layer | Komponen | Input | Output |
+|-------|----------|-------|--------|
+| NRB | Parser | request + files | observed_data + documents |
+| NRB | **HPVD** | observed_data + sector | candidates [{type, data, provenance}] |
+| NRB | PMR | observed_data + candidates | hypotheses |
+| NRB | Knowledge Builder | observed_data + hypotheses | KNOWN/UNKNOWN/CONFLICT |
+| Boundary | Producer t-1 | epistemic state | frozen observed_state |
+| Core | Adapter (CCR) | observed_state | structured representation |
+| Core | VectorState (J06) | structured representation | binary feature vector |
+| Core | V1 (J08) | VectorState + availability | COVERED / UNCOVERED |
+| Core | V3 (J10) | V1 result + rules | PERMIT / BLOCK / NOT_EVALUATED |
+| Core | Evidence Pack (J11) | decision + hash chain | proof artifact |
+
+**Catatan penting:**
+- HPVD beroperasi di **NRB**, sebelum Core, bukan setelah Core.
+- `J13 (PostCoreQuery)` di Core spec adalah trigger untuk downstream setelah Core selesai — ini BERBEDA dengan J13 di `HPVDPipelineEngine` (yang adalah query format masuk ke adapter layer HPVD).
+- HPVD tidak membuat keputusan. Output-nya adalah candidates yang akan diproses PMR.
 
 ---
 
-## 2. HPVD dalam Pipeline (Stage 11–16)
+## 2. HPVD dalam Pipeline — NRB Stage
 
-### Stage 11 — Serving Adapter → J13
+### NRB Step 1 — Parser (Sector-Specific)
 
-Serving layer menerima J12 (EvidencePack) dan menghasilkan **J13 (PostCoreQuery)** — trigger untuk HPVD. J13 tidak mengubah keputusan; hanya mempersiapkan data untuk analog reasoning.
+Parser menerima request + files dan menghasilkan `observed_data`:
 
-### Stage 12 — Knowledge Snapshot Pin
+```json
+{
+  "observed_data": {
+    "applicant_name": "Budi Santoso",
+    "loan_amount": 50000000,
+    "income": 10000000,
+    "nik": "1234567890123456"
+  },
+  "documents": [
+    {"doc_type": "loan_application_form", "present": true},
+    {"doc_type": "bank_statement", "present": true},
+    {"doc_type": "financial_statement", "present": false}
+  ],
+  "metadata": {
+    "sector": "banking",
+    "parser_version": "parser_banking_v1"
+  }
+}
+```
 
-HPVD menerima `pinset_snapshot_id` dari J13 dan me-resolve ke:
-- `dataset_snapshot_id` — snapshot historis yang digunakan
-- `ontology_version` — versi ontologi
-- `calibration_model_version` — versi model kalibrasi
+Parser adalah sector-specific (`ParserBanking`, `ParserChatbot`, `ParserFinance`). NRBOrchestrator memilih parser berdasarkan `sector` dari request.
 
-### Stage 13 — HPVD Retrieval → J14
+### NRB Step 2 — HPVD (Knowledge Retrieval)
 
-Structural-first analog retrieval. HPVD mencari kasus historis yang secara struktur mirip berdasarkan `action_class`, `vector geometry`, domain.
+HPVD menerima `observed_data + metadata.sector` dari Parser dan me-retrieve knowledge yang relevan dari Knowledge Layer.
 
-### Stage 14 — Phase Consistency Filter → J15
+**3 tahap internal HPVD:**
 
-Memastikan analog dibandingkan pada **fase lifecycle yang sama**. Contoh: `TRADE_EXECUTION` tidak boleh dibandingkan dengan `REFUND` atau `LOAN_SUBMISSION`.
+1. **Sector Filter** — ambil semua knowledge objects dengan matching `sector`
+2. **Field-Based Matching** — cocokkan field di `observed_data` (e.g., `loan_amount`, `income`) dengan policy feature index
+3. **Mandatory Retrieval** — selalu sertakan `rule_mapping` yang cocok dengan sektor
 
-### Stage 15 — Analog Family Formation → J16
+**Output HPVD:**
 
-Mengelompokkan candidates ke dalam **Analog Families** dengan `membership_probability` dan historical outcome distribution.
+```json
+{
+  "candidates": [
+    {
+      "type": "policy",
+      "data": {
+        "policy_id": "POLICY_SME_LOAN_V1",
+        "required_documents": ["loan_application_form", "identity_document", "bank_statement", "financial_statement"],
+        "eligibility_rules": {"min_income": 3000000, "min_age": 21}
+      },
+      "provenance": {"source": "bank_internal_policy", "created_at": "2026-01-01"}
+    },
+    {
+      "type": "product",
+      "data": {
+        "product_id": "SME_LOAN_STANDARD",
+        "loan_constraints": {"min_amount": 5000000, "max_amount": 500000000}
+      },
+      "provenance": {"source": "product_catalog"}
+    },
+    {
+      "type": "rule_mapping",
+      "data": {
+        "mapping_id": "RULE_MAP_SME_LOAN_V1",
+        "v1_required_fields": ["loan_amount", "beneficiary_name", "loan_contract_date"],
+        "v3_required_fields": ["loan_amount", "income", "dti_ratio"],
+        "document_requirements": {
+          "loan_application_form": "doc_application_present",
+          "bank_statement": "doc_bank_statement_present"
+        }
+      },
+      "provenance": {"source": "core_binding_definition"}
+    }
+  ]
+}
+```
 
-### Stage 16 — PMR Hypothesis Graph → J17
+### NRB Step 3 — PMR (Hypothesis Construction)
 
-PMR membangun hypothesis graph: nodes support/contradiction, overall_confidence, confidence interval.
+PMR menerima `observed_data + candidates` dan membangun hypotheses:
+- Apa field yang seharusnya ada (dari rule_mapping)?
+- Apa yang present vs missing?
+
+### NRB Step 4 — Knowledge Builder (Epistemic Structuring)
+
+Knowledge Builder menghasilkan epistemic state:
+
+```json
+{
+  "KNOWN": {"applicant_name": "Budi Santoso", "loan_amount": 50000000, "income": 10000000},
+  "UNKNOWN": ["beneficiary_name", "loan_contract_date", "financial_statement"],
+  "CONFLICT": []
+}
+```
 
 ---
 
 ## 3. Multi-Domain Strategy Architecture
 
-HPVD di Manithy bukan satu engine monolitik — ia adalah **retrieval layer** yang di-dispatch ke strategy berbeda per domain.
+HPVD adalah retrieval layer yang di-dispatch ke strategy berbeda berdasarkan `scope.domain` di J13.
 
 ```
-┌──────────────────────────────────────────────┐
-│          HPVDPipelineEngine                   │
-│         (unified J13 → J14/J15/J16)           │
-├──────────────┬──────────────┬─────────────────┤
-│  Strategy    │  Dispatcher  │                 │
-└──────┬───────┴──────┬───────┘                 │
-       │              │                         │
-  ┌────▼────┐  ┌──────▼──────┐                  │
-  │ Finance │  │  Document   │                  │
-  │Strategy │  │  Strategy   │                  │
-  │         │  │             │                  │
-  │HPVD Core│  │Sentence-    │                  │
-  │(60×45)  │  │Transformer  │                  │
-  │+ FAISS  │  │+ FAISS      │                  │
-  └────┬────┘  └──────┬──────┘                  │
-       │              │                         │
-       J14            J14   ← output            │
-       J15            J15   ← contract          │
-       J16            J16   ← sama              │
+┌───────────────────────────────────────────────────────┐
+│              HPVDPipelineEngine                       │
+│         (unified: J13 → J14 / J15 / J16)             │
+├──────────────────┬────────────────────────────────────┤
+│  StrategyDispatcher (domain → strategy)               │
+└──────┬───────────┬──────────────┬─────────────────────┘
+       │           │              │
+  ┌────▼────┐ ┌────▼────┐  ┌─────▼──────┐
+  │Knowledge│ │ Finance │  │  Document  │
+  │Strategy │ │Strategy │  │  Strategy  │
+  │         │ │         │  │            │
+  │Sector   │ │HPVDCore │  │Sentence-   │
+  │Filter + │ │(60×45)  │  │Transformer │
+  │Field    │ │+ FAISS  │  │+ FAISS     │
+  │Matching │ │         │  │            │
+  └────┬────┘ └────┬────┘  └─────┬──────┘
+       │           │              │
+       J14         J14            J14    ← KnowledgeCandidate list
+       J15         J15            J15    ← filtered candidates
+       J16         J16            J16    ← grouped by type/family
 ```
 
 **Prinsip:**
-- Input contract sama: J13
+- Input contract sama: J13 (`query_id`, `scope.domain`, `observed_data` / `query_payload`)
 - Output contract sama: J14/J15/J16
-- HPVD Core (trajectory 60×45) dipakai **Finance domain saja**
-- Domain lain (Chatbot, Banking) pakai DocumentRetrievalStrategy
-- Outcome-blind principle berlaku di **semua** strategy
+- `KnowledgeRetrievalStrategy` — **primary strategy** untuk Banking/Finance/Chatbot sector use cases
+- `FinanceRetrievalStrategy` — untuk capital markets / OHLCV time series use cases (market data)
+- `DocumentRetrievalStrategy` — untuk full-text document retrieval
+- Non-binding principle berlaku di semua strategy
 
-### Concept Mapping: Finance ↔ Document
+### Concept Mapping: Knowledge ↔ Finance ↔ Document
 
-| Konsep | Finance (Trajectory) | Document (Chatbot/Banking) |
-|--------|---------------------|---------------------------|
-| Input | 60×45 matrix, fixed shape | Teks variabel |
-| Embedding | PCA → 256-d | Sentence-transformer → 384-d |
-| Pre-filter key | Regime tuple `(trend, vol, struct)` | Topic category string |
-| Pre-filter index | SparseRegimeIndex | Topic inverted index |
-| Dense search | FAISS on 256-d | FAISS on 384-d (cosine) |
-| Distance | Euclidean + Cosine + Temporal | Cosine only (temporal ❌) |
-| Phase identity | DNA 16-d (continuous) | Doc-type (categorical) |
-| Family grouping | Regime coherence | Topic/semantic coherence |
-| Uncertainty flags | `weak_support`, `partial_overlap` | Same flags, same semantics |
-| calibrated_similarity | Structural compatibility | Semantic compatibility |
-| Outcome-blind | ✅ | ✅ |
+| Konsep | Knowledge | Finance (Market Data) | Document |
+|--------|-----------|----------------------|----------|
+| Input | observed_data + sector | 60×45 trajectory matrix | Text / chunks |
+| Embedding | Field keywords | PCA → 256-d | Sentence-transformer → 384-d |
+| Pre-filter | Sector tag | Regime tuple | Topic category |
+| Match logic | Field-based + sector | Euclidean + Cosine + Temporal | Cosine similarity |
+| Output type | Policy/Product/RuleMapping | Analog trajectory | Document chunk |
+| "Family" / group | By candidate type | By regime coherence | By topic |
+| Outcome-blind | ✅ | ✅ | ✅ |
 
 ---
 
 ## 4. J-Files Reference
 
-### J12 — V2_FactsEnvelope (input ke Serving Adapter)
+### J13 — Knowledge Query (input ke HPVDPipelineEngine)
 
-```json
-{
-  "kind": "J12.V2_FactsEnvelope",
-  "schema_id": "manithy.v2.facts_envelope.v2",
-  "pack_ref": {
-    "pack_id": "<TENANT>:<SUBJECT>:<SEQ>",
-    "hash_root": "sha256_merkle_root",
-    "pinset_snapshot_id": "PINSET_2026W06"
-  },
-  "facts": {
-    "event_class": "TRADE_EXECUTION | PAYMENT_REFUND | LOAN_SUBMISSION",
-    "ep": "COVERED | UNCOVERED",
-    "aat": "PERMIT | BLOCK | REQUIRE_OVERRIDE | NOT_EVALUATED"
-  }
-}
-```
-
-### J13 — PostCoreQuery (trigger HPVD)
+> **Catatan:** J13 di codebase ini adalah format query masuk ke `HPVDPipelineEngine`, bukan "PostCoreQuery" Core layer. Nama tetap dipertahankan untuk backward compatibility.
 
 ```json
 {
   "schema_id": "manithy.post_core_query.v2",
-  "binding": "NON_BINDING",
-  "query_id": "Q_TRADE_EXECUTION_SUPPORT",
-  "query_version": 1,
-  "opaque_pack_ref": {
-    "pack_id": "pack_01...",
-    "pinset_snapshot_id": "pinset_finance.v1#snap_N"
-  },
+  "query_id": "REQ_LOAN_0001",
   "scope": {
-    "domain": "finance | chatbot | banking",
-    "action_class": "TRADE_EXECUTION | CHATBOT_EXECUTION | LOAN_EXECUTION",
-    "allowed_topics": ["VOLATILITY_ESCALATION", "RISK_THRESHOLD_POLICY"],
-    "allowed_corpora": ["INTERNAL_RISK_RUNBOOKS"],
-    "allowed_doc_types": ["PDF", "POLICY_TEXT", "MARKDOWN"],
-    "temporal_scope": "LAST_365_DAYS",
-    "max_results": 10,
-    "citation_policy": "CITE_REQUIRED"
-  }
+    "domain": "knowledge"
+  },
+  "observed_data": {
+    "applicant_name": "Budi Santoso",
+    "loan_amount": 50000000,
+    "income": 10000000
+  },
+  "sector": "banking",
+  "allowed_topics": [],
+  "allowed_corpora": [],
+  "allowed_doc_types": []
 }
 ```
 
-### J14 — HPVD_RetrievalRaw (output Stage 13)
+Fields `observed_data` dan `sector` ditambahkan di Manithy v1. Fields lama (`query_payload`, `allowed_topics`, `allowed_corpora`) tetap ada untuk backward compatibility dengan `FinanceRetrievalStrategy` dan `DocumentRetrievalStrategy`.
+
+### J14 — RetrievalRaw (output KnowledgeRetrievalStrategy)
 
 ```json
 {
-  "schema_id": "manithy.hpvd.retrieval_raw.v2",
-  "binding": "NON_BINDING",
-  "query_id": "Q_TRADE_EXECUTION_SUPPORT",
+  "schema_id": "manithy.hpvd_retrieval_raw.v1",
+  "query_id": "REQ_LOAN_0001",
+  "domain": "knowledge",
   "candidates": [
     {
-      "doc_id": "hist_case_4421",
-      "chunk_id": "c01",
-      "calibrated_similarity": 0.84,
-      "confidence_interval": [0.78, 0.89],
-      "phase_label": "EXECUTION_PHASE",
-      "abstention_flag": false
+      "type": "policy",
+      "data": {
+        "policy_id": "POLICY_SME_LOAN_V1",
+        "sector": "banking",
+        "required_documents": ["loan_application_form", "identity_document"]
+      },
+      "provenance": {"source": "bank_internal_policy", "created_at": "2026-01-01"}
+    },
+    {
+      "type": "rule_mapping",
+      "data": {
+        "mapping_id": "RULE_MAP_SME_LOAN_V1",
+        "v1_required_fields": ["loan_amount", "beneficiary_name"]
+      },
+      "provenance": {"source": "core_binding_definition"}
     }
   ],
-  "lineage": {
-    "knowledge_snapshot": "ksnap_finance_2026_02_01",
-    "retrieval_config_id": "hpvd_cfg_finance_v1"
+  "diagnostics": {
+    "sector_matched": "banking",
+    "objects_considered": 7,
+    "objects_returned": 3,
+    "rule_mapping_forced": true,
+    "latency_ms": 8.2
   }
 }
 ```
 
-### J15 — PhaseFilteredSet (output Stage 14)
+### J15 — PhaseFilteredSet (sector/type filtered candidates)
 
 ```json
 {
-  "schema_id": "manithy.hpvd.phase_filtered.v1",
-  "binding": "NON_BINDING",
+  "schema_id": "manithy.phase_filtered_set.v1",
+  "query_id": "REQ_LOAN_0001",
   "accepted": [
-    {"doc_id": "hist_case_4421", "chunk_id": "c01", "calibrated_similarity": 0.84}
-  ],
-  "rejected": [
-    {"doc_id": "hist_case_0099", "reason": "PHASE_MISMATCH"}
-  ]
-}
-```
-
-### J16 — AnalogFamilyAssignment (output Stage 15)
-
-```json
-{
-  "schema_id": "manithy.hpvd.analog_family.v1",
-  "binding": "NON_BINDING",
-  "family_id": "AF_HIGH_VOL_ESCALATION_V2",
-  "membership_probability": 0.68,
-  "confidence_interval": [0.60, 0.75],
-  "cluster_snapshot_id": "cluster_finance_v2",
-  "family_characteristics": {
-    "dominant_pattern": "HIGH_VOLATILITY_ESCALATION",
-    "historical_outcome_distribution": {
-      "PERMIT": 0.21,
-      "REQUIRE_OVERRIDE": 0.63,
-      "BLOCK": 0.16
+    {
+      "type": "policy",
+      "data": {"policy_id": "POLICY_SME_LOAN_V1"},
+      "provenance": {"source": "bank_internal_policy"}
     }
+  ],
+  "rejected": [],
+  "filter_criteria": {
+    "sector": "banking",
+    "allowed_types": ["policy", "product", "rule_mapping"]
   }
 }
 ```
+
+### J16 — KnowledgePackage (grouped by type)
+
+```json
+{
+  "schema_id": "manithy.analog_family_assignment.v1",
+  "query_id": "REQ_LOAN_0001",
+  "families": [
+    {
+      "family_id": "knowledge_policy",
+      "members": [
+        {"type": "policy", "data": {"policy_id": "POLICY_SME_LOAN_V1"}, "provenance": {...}}
+      ],
+      "coherence": {"mean_confidence": 1.0, "dispersion": 0.0, "size": 1},
+      "structural_signature": {"phase": "policy_group"},
+      "uncertainty_flags": {"phase_boundary": false, "weak_support": false, "partial_overlap": false}
+    },
+    {
+      "family_id": "knowledge_rule_mapping",
+      "members": [
+        {"type": "rule_mapping", "data": {"mapping_id": "RULE_MAP_SME_LOAN_V1"}, "provenance": {...}}
+      ],
+      "coherence": {"mean_confidence": 1.0, "dispersion": 0.0, "size": 1},
+      "structural_signature": {"phase": "rule_mapping_group"},
+      "uncertainty_flags": {"phase_boundary": false, "weak_support": false, "partial_overlap": false}
+    }
+  ],
+  "total_members": 3,
+  "total_families": 2,
+  "metadata": {"domain": "knowledge", "sector": "banking"}
+}
+```
+
+> **Catatan J16:** `schema_id` dibiarkan `manithy.analog_family_assignment.v1` untuk backward compatibility dengan kode yang sudah ada. Dalam knowledge context, setiap "family" adalah group of candidates dengan tipe yang sama (policy/product/rule_mapping).
 
 ---
 
-## 5. VectorState Format (J06)
+## 5. VectorState Format (Core Layer — J06)
 
-VectorState adalah representasi vektor lengkap dari satu kasus. Terdiri dari 6 bagian:
+> **Penting:** VectorState adalah output dari **Adapter di Core layer** (J06), BUKAN output HPVD. VectorState dibuat SETELAH boundary t-1, dari `observed_state` yang sudah di-freeze.
+
+VectorState adalah representasi biner dari observed_state untuk evaluasi oleh V1 (Coverage) dan V3 (Decision).
 
 ### 5.1 Metadata (kernel identity)
 
@@ -283,8 +371,8 @@ meta:
   ruleset_version: "r1"
   policy_bundle_version: "p1"
   commit_id: "sha256_..."
-  tenant_id: "FINANCE_DESK | MERCHANT_EU | BANKING_CORE"
-  action_class: "TRADE_EXECUTION | CHATBOT_EXECUTION | LOAN_EXECUTION"
+  tenant_id: "banking_core | chatbot_eu | finance_desk"
+  action_class: "loan_application | refund | trade_execution"
 ```
 
 ### 5.2 Authority Identity
@@ -301,21 +389,23 @@ authority_identity:
 
 ```yaml
 intent:
-  action_kind: "TRADE_EXECUTION | REFUND | LOAN_SUBMISSION"
-  subject_key: "TRADER_005 | ORDER_67250 | APPLICATION_8891"
+  action_kind: "LOAN_SUBMISSION | REFUND | TRADE_EXECUTION"
+  subject_key: "APPLICATION_8891 | ORDER_67250"
   irreversible: true
 ```
 
-### 5.4 Domain State (berbeda per domain)
+### 5.4 Domain State (per sector)
 
-**Finance:**
+**Banking/Loan:**
 ```yaml
 domain_state:
-  p0.metrics: {rv_short, rv_long, vol_ratio, vol_of_vol, amihud_illiquidity}
-  p0.flags:   {proc_fail}
-  p1.metrics: {K, LCV, LTV, entropy_density}
-  p1.flags:   {K_EXCESS, LCV_SPIKE, LTV_SHOCK, IDD, POPPER_FALSIFIABLE}
-  availability: {liquidity_proxy_known, volatility_structure_known, curvature_signal_known}
+  p0.metrics: {requested_amount_minor, income_minor, debt_ratio}
+  p0.flags:   {collateral_present}
+  availability:
+    income_verified: true
+    bureau_data_known: false
+    collateral_valuation_known: false
+  unknown_bitmap: "010011"
 ```
 
 **Chatbot/Refund:**
@@ -323,95 +413,131 @@ domain_state:
 domain_state:
   p0.metrics: {amount_minor}
   p0.flags:   {customer_present, operator_initiated}
-  availability: {original_payment_state_known, psp_refund_capability_known, chargeback_state_known}
+  availability:
+    original_payment_state_known: true
+    psp_refund_capability_known: false
 ```
 
-**Banking/Loan:**
+**Finance (Market Data):**
 ```yaml
 domain_state:
-  p0.metrics: {requested_amount_minor, income_minor, debt_ratio}
-  p0.flags:   {collateral_present}
-  p1.metrics: {credit_signal_entropy}
-  availability: {income_verified, bureau_data_known, collateral_valuation_known}
+  p0.metrics: {rv_short, rv_long, vol_ratio, amihud_illiquidity}
+  p0.flags:   {proc_fail}
+  p1.metrics: {K, LCV, LTV, entropy_density}
+  availability: {liquidity_proxy_known, volatility_structure_known}
 ```
 
-### 5.5 Structural State
+### 5.5 Relasi VectorState dan HPVD
 
-```yaml
-structural_state:
-  trajectory_length_bucket: ENUM
-  commit_density_bucket: ENUM
-  authority_stability_flag: boolean
-  entropy_bucket: ENUM
 ```
+NRB:
+  observed_data (raw fields: loan_amount=50M, income=10M)
+  → HPVD → candidates (policy: min_income=3M, rule_mapping: v1_fields=[...])
+  → PMR → hypotheses
+  → Knowledge Builder → KNOWN/UNKNOWN/CONFLICT
+
+Boundary t-1: freeze
+
+Core (J06 — VectorState):
+  observed_state + availability bitmap
+  income_above_min: true   ← derived from KNOWN + policy rule
+  employment_known: false  ← dari UNKNOWN
+  identity_verified: false ← dari UNKNOWN
+```
+
+HPVD mengambil `policy` dan `rule_mapping` yang kemudian — melalui PMR dan Knowledge Builder — dipakai sebagai referensi untuk mengisi field availability di VectorState. HPVD sendiri tidak menulis ke VectorState.
 
 ---
 
-## 6. KL Integration
+## 6. Knowledge Layer Integration
 
-### 6.1 Peran Knowledge Layer
+### 6.1 Peran Knowledge Layer dalam Manithy v1
 
-KL berperan di **Stage 12–13** pipeline Manithy:
-- **Stage 12:** KL menyediakan snapshot pengetahuan yang immutable dan version-pinned
-- **Stage 13:** KL menjadi sumber *candidate pool* untuk HPVD retrieval
+Knowledge Layer adalah source-of-truth untuk semua knowledge objects yang di-retrieve oleh HPVD. Dalam MVP (Knowledge Starter), Knowledge Layer berisi:
 
-**KL Base URL:** `https://knowledge-layer-production.up.railway.app`
+| Tipe | Contoh | Dipakai oleh |
+|------|--------|-------------|
+| Policy | `policy_sme_loan_v1.json` | HPVD (Step 2 field matching) |
+| Product | `product_sme_loan_standard.json` | HPVD (Step 2 field matching) |
+| Document Schema | `doc_loan_application.json` | Parser + HPVD |
+| Rule Mapping | `rule_mapping_sme_loan.json` | HPVD (Step 3 mandatory) |
+| Policy Feature Index | `policy_feature_index.json` | HPVD (Step 2 acceleration) |
 
-### 6.2 KL API Saat Ini
+Pada Knowledge Starter (MVP), belum ada:
+- Historical cases
+- Risk models
+- Learned patterns
 
-| Endpoint | Deskripsi |
-|----------|-----------|
-| `POST /events` | Buat event dengan hash chain |
-| `GET /events?tenant_id=` | List events per tenant |
-| `POST /documents` | Buat document metadata |
-| `GET /documents?tenant_id=` | List documents per tenant |
-| `POST /documents/{id}/versions` | Upload versi baru (file) |
-| `GET /documents/{id}/versions` | List versi document |
+### 6.2 Knowledge Layer — File Structure (Starter)
 
-### 6.3 Gap Analysis
+```
+knowledge_layer/
+├── banking/
+│   ├── policy_sme_loan_v1.json
+│   ├── product_sme_loan_standard.json
+│   ├── rule_mapping_sme_loan_v1.json
+│   ├── doc_loan_application.json
+│   ├── doc_identity.json
+│   ├── doc_bank_statement.json
+│   └── policy_feature_index.json
+├── chatbot/
+│   ├── policy_refund_v1.json
+│   └── rule_mapping_refund_v1.json
+└── finance/
+    └── (future: market data policies)
+```
+
+### 6.3 NRBOrchestrator + HPVD Integration
+
+```python
+class NRBOrchestrator:
+    def run_nrb(self, request):
+        # 1. Resolve parser by sector
+        parser = self.parser_registry.get(request["sector"])
+
+        # 2. Parse (sector-specific)
+        parsed = parser.parse(request)
+        # parsed = {observed_data, documents, metadata}
+
+        # 3. HPVD retrieve (generic, sector-agnostic)
+        candidates = self.hpvd.retrieve(
+            observed=parsed["observed_data"],
+            sector=parsed["metadata"]["sector"]
+        )
+        # candidates = [{type, data, provenance}, ...]
+
+        # 4. PMR build hypotheses
+        hypotheses = self.pmr.build(
+            observed=parsed["observed_data"],
+            candidates=candidates
+        )
+
+        # 5. Knowledge Builder
+        knowledge = self.knowledge_builder.build(
+            observed=parsed["observed_data"],
+            hypotheses=hypotheses
+        )
+
+        return {"parsed": parsed, "candidates": candidates,
+                "hypotheses": hypotheses, "knowledge": knowledge}
+```
+
+### 6.4 Gap Analysis (KL Production)
 
 | # | Gap | Severity | Status | Dampak ke HPVD |
 |:-:|-----|:--------:|--------|----------------|
-| G1 | Snapshot Pinning / Pinset Management | 🔴 Critical | Belum ada | HPVD tidak bisa resolve `pinset_snapshot_id` |
-| G2 | Chunk-level Storage & Retrieval | 🔴 Critical | Belum ada | HPVD tidak bisa retrieval granular per chunk |
-| G3 | Metadata terstruktur (domain, action_class, phase_label) | 🟠 High | Parsial | Filtering candidate pool tidak bisa dilakukan |
-| G4 | Ontology & Calibration Versioning | 🟠 High | Belum ada | HPVD tidak bisa resolve versi kalibrasi |
-| G5 | Content Retrieval (file download) | 🟠 High | Belum ada | HPVD tidak bisa membaca isi dokumen |
-| G6 | Search / Query Endpoint dengan filter | 🟡 Medium | Belum ada | Harus fetch semua dokumen, filter di client |
-| G7 | Temporal Scope Filtering | 🟡 Medium | Belum ada | `LAST_365_DAYS` scope tidak bisa diaplikasikan |
+| G1 | Sector-based storage & retrieval | 🔴 Critical | MVP: in-memory | HPVD harus load dari file per sektor |
+| G2 | Policy versioning | 🟠 High | Belum ada | HPVD tidak bisa resolve versi policy |
+| G3 | Structured metadata (sector, product_type) | 🟠 High | Parsial | Filtering candidate pool terbatas |
+| G4 | Search / query endpoint | 🟡 Medium | Belum ada | Harus fetch semua objects, filter di client |
+| G5 | Snapshot pinning | 🟡 Medium | Belum ada | Determinism tidak bisa di-enforce cross-request |
 
 **Prioritas implementasi KL:**
-1. **Fase 1:** G5 (download content) + G3 (metadata) — minimum viable integration
-2. **Fase 2:** G1 (snapshot pinning) + G6 (search endpoint)
-3. **Fase 3:** G2 (chunk-level) + G4 (ontology/calibration) + G7 (temporal)
-
-### 6.4 Target Integration Flow (setelah semua gap terpenuhi)
-
-```
-HPVD menerima J13 (PostCoreQuery)
-│
-│  J13.opaque_pack_ref.pinset_snapshot_id = "PINSET_2026W10"
-│
-├─► [1] GET /snapshots/PINSET_2026W10
-│       → document list + version + ontology_version + calibration_version
-│
-├─► [2] POST /documents/search
-│       { tenant_id, filters: {action_class, phase_label, domain},
-│         snapshot_id, temporal_scope, limit: 50 }
-│       → candidate documents yang sudah difilter
-│
-├─► [3] GET /documents/{id}/versions/{v}/chunks
-│       → chunks dari setiap candidate document
-│
-├─► [4] HPVD melakukan:
-│       - Structural/semantic similarity computation
-│       - Confidence interval calculation
-│       - Abstention evaluation
-│
-└─► [5] Output: J14 (HPVD_RetrievalRaw)
-        { candidates: [...], lineage: {knowledge_snapshot, retrieval_config_id} }
-```
+1. **MVP (saat ini):** In-memory load dari JSON files per sektor
+2. **Fase 1:** REST API dengan endpoint `GET /knowledge?sector=banking&type=policy`
+3. **Fase 2:** Versioning + snapshot pinning
+4. **Fase 3:** Semantic search endpoint
 
 ---
 
-*Last updated: 2026-04-01 | Matrix22 / Kalibry Finance*
+*Last updated: 2026-04-01 | Manithy v1 — Deterministic Attestation System*

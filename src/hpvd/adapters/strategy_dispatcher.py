@@ -16,13 +16,18 @@ from .retrieval_strategy import RetrievalStrategy
 
 # Canonical aliases — maps convenience names to strategy domain keys.
 DOMAIN_ALIASES: Dict[str, str] = {
-    # Finance family
+    # Finance family (capital markets / OHLCV market data)
     "finance": "finance",
     "equity": "finance",
-    # Document family
+    # Knowledge family (Manithy v1 — sector-agnostic knowledge retrieval)
+    # Use scope.domain = "knowledge" explicitly to route to KnowledgeRetrievalStrategy.
+    "knowledge": "knowledge",
+    # Document family (full-text document retrieval)
     "document": "document",
     "chatbot": "document",
     "refund": "document",
+    # "banking" and "loan" kept as document aliases for backward compatibility.
+    # New code should use domain="knowledge" for sector-agnostic Knowledge Layer retrieval.
     "banking": "document",
     "loan": "document",
 }

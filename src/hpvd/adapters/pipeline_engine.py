@@ -102,6 +102,22 @@ class HPVDPipelineEngine:
             raise RuntimeError("No document strategy registered.")
         strategy.build_index(chunks)
 
+    def build_knowledge_index(self, knowledge_corpus: Any) -> None:
+        """Build the knowledge strategy index from a Knowledge Layer corpus.
+
+        Parameters
+        ----------
+        knowledge_corpus : list of dict
+            Each dict must have an ``object_type`` key (``"policy"``,
+            ``"product"``, ``"rule_mapping"``, ``"document_schema"``) and
+            a ``sector`` field.  See ``KnowledgeRetrievalStrategy.build_index``
+            and ``docs/HPVD_CORE.md`` Section 2 for schema details.
+        """
+        strategy = self._dispatcher._strategies.get("knowledge")
+        if strategy is None:
+            raise RuntimeError("No knowledge strategy registered.")
+        strategy.build_index(knowledge_corpus)
+
     # ------------------------------------------------------------------
     # Main pipeline
     # ------------------------------------------------------------------

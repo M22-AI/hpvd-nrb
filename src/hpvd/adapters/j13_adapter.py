@@ -35,6 +35,11 @@ class J13Adapter:
             # expects either ``hpvd_input_bundle`` or raw fields (trajectory,
             # dna, geometry_context, metadata).
             query.update(j13.query_payload)
+        elif domain == "knowledge":
+            # Knowledge retrieval — pass observed_data and sector.
+            # These fields are top-level on J13 (Manithy v1 schema).
+            query["observed_data"] = j13.observed_data
+            query["sector"] = j13.sector
         else:
             # Document / chatbot / banking / loan / …
             query["text"] = j13.query_payload.get("text", "")
