@@ -514,7 +514,7 @@ fused_dist  = 0.7 × hybrid_dist + 0.3 × dna_distance
 confidence  = max(0, 1 - min(fused_dist, 1))
 ```
 
-### 9.4 Legacy API (untuk FinanceRetrievalStrategy)
+### 9.4 Legacy API (for FinanceRetrievalStrategy)
 
 ```python
 from hpvd import HPVDEngine, HPVDInputBundle, HPVD_Output

@@ -1,4 +1,4 @@
-# HPVD REST API ù Deployment & Integration Guide
+# HPVD REST API - Deployment & Integration Guide
 
 > This document is intended for **external teams** (Parser, NRB, PMR) that will call HPVD as a REST service in the Manithy v1 pipeline. For HPVD internal architecture, see [HPVD_CORE.md](HPVD_CORE.md). For HPVD's position in the Manithy pipeline, see [MANITHY_INTEGRATION.md](MANITHY_INTEGRATION.md).
 
@@ -386,7 +386,7 @@ A file may contain one object or an array of multiple objects:
 **Symptoms:**
 
 ```json
-{"detail": "Knowledge corpus is empty ù Knowledge Layer was unreachable at startup."}
+{"detail": "Knowledge corpus is empty ‚Äî Knowledge Layer was unreachable at startup."}
 ```
 
 **Cause:** Server startup succeeded but corpus is empty (see E1).
