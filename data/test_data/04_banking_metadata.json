@@ -1,0 +1,389 @@
+{
+  "tenant_id": "banking",
+  "source": {
+    "spec": "plugins/banking/spec.py",
+    "domain_plugin": "plugins/banking/domain_plugin.py",
+    "policy_bundle": "plugins/banking/policy_bundle.py",
+    "v3_engine": "core/binding/v3/policy_bundle.py"
+  },
+  "field_inventory": {
+    "total_known_fields": 136,
+    "groups": [
+      {
+        "name": "operation_program_identity",
+        "fields": [
+          "operation_id",
+          "practice_id",
+          "fund_code",
+          "fund_section",
+          "guarantee_type",
+          "guarantee_subtype",
+          "process_type",
+          "aid_regime",
+          "temporary_framework_flag",
+          "temporary_framework_type"
+        ]
+      },
+      {
+        "name": "lender",
+        "fields": [
+          "lender_name",
+          "lender_code",
+          "lender_branch",
+          "lender_country"
+        ]
+      },
+      {
+        "name": "beneficiary_company",
+        "fields": [
+          "beneficiary_name",
+          "beneficiary_vat",
+          "beneficiary_tax_code",
+          "legal_form",
+          "ateco_code",
+          "sector",
+          "company_size",
+          "foundation_date",
+          "activity_start_date",
+          "company_status"
+        ]
+      },
+      {
+        "name": "guarantee",
+        "fields": [
+          "guarantee_issue_date",
+          "guarantee_expiry_date",
+          "guarantee_percentage",
+          "guarantee_amount",
+          "guarantee_counter_percentage",
+          "guarantee_counter_amount",
+          "confidi_guarantee_percentage",
+          "confidi_guarantee_amount",
+          "guarantee_regime",
+          "guarantee_resolution_date"
+        ]
+      },
+      {
+        "name": "loan",
+        "fields": [
+          "loan_type",
+          "loan_purpose",
+          "loan_amount",
+          "loan_duration_months",
+          "loan_pre_amortization_months",
+          "loan_amortization_type",
+          "loan_interest_rate",
+          "loan_taeg",
+          "loan_contract_date",
+          "loan_disbursement_date",
+          "loan_maturity_date",
+          "loan_resolution_bank_date",
+          "loan_status"
+        ]
+      },
+      {
+        "name": "financial_conditions",
+        "fields": [
+          "spread_rate",
+          "reference_rate",
+          "rendistato_rate",
+          "nominal_rate",
+          "effective_rate",
+          "installment_amount",
+          "installment_frequency",
+          "installment_number",
+          "residual_debt"
+        ]
+      },
+      {
+        "name": "core_documents",
+        "fields": [
+          "doc_application_present",
+          "doc_admission_letter_present",
+          "doc_financing_contract_present",
+          "doc_disbursement_act_present",
+          "doc_bank_resolution_present",
+          "doc_annex_present"
+        ]
+      },
+      {
+        "name": "risk_recovery",
+        "fields": [
+          "risk_event_type",
+          "risk_event_date",
+          "first_default_date",
+          "previous_risk_event_flag",
+          "previous_risk_event_date",
+          "exposure_detection_date",
+          "risk_event_notice_date_to_mcc",
+          "recovery_procedure_type",
+          "recovery_start_act_date",
+          "recovery_start_act_sent_date",
+          "recovery_procedure_status",
+          "recovery_amount_claimed",
+          "recovery_amount_recovered",
+          "recovery_amount_residual"
+        ]
+      },
+      {
+        "name": "claim_exposure",
+        "fields": [
+          "claim_type",
+          "claim_submission_date",
+          "claim_amount",
+          "claim_guarantee_amount",
+          "claim_residual_amount",
+          "claim_protocol_number",
+          "claim_channel",
+          "claim_status",
+          "exposure_total_amount",
+          "exposure_principal_amount",
+          "exposure_interest_amount",
+          "exposure_penalty_amount",
+          "exposure_measurement_date"
+        ]
+      },
+      {
+        "name": "declarations_and_evidence",
+        "fields": [
+          "decl_no_concordato",
+          "decl_no_difficolta",
+          "decl_no_inadempienze",
+          "decl_no_pregiudizievoli",
+          "decl_no_bankruptcy",
+          "decl_no_liquidation",
+          "decl_no_protest",
+          "decl_no_default",
+          "doc_decl_no_concordato_present",
+          "doc_decl_no_difficolta_present",
+          "doc_decl_no_inadempienze_present",
+          "doc_decl_no_pregiudizievoli_present"
+        ]
+      },
+      {
+        "name": "credit_risk_bureau_economic_docs",
+        "fields": [
+          "doc_rating_present",
+          "doc_credit_risk_declaration_present",
+          "doc_centrale_rischi_present",
+          "doc_visura_present",
+          "doc_ateco_present",
+          "doc_financial_statement_present",
+          "doc_credit_bureau_present",
+          "cr_system_flag",
+          "cr_system_last_update",
+          "cr_default_flag",
+          "cr_utp_flag",
+          "cr_past_due_flag",
+          "cr_bad_loans_flag",
+          "credit_bureau_crif_flag",
+          "credit_bureau_cerved_flag"
+        ]
+      },
+      {
+        "name": "commission_variation_suspension_consolidation",
+        "fields": [
+          "commission_due_amount",
+          "commission_paid_amount",
+          "commission_integration_amount",
+          "commission_payment_date",
+          "commission_regime",
+          "operation_variation_type",
+          "operation_variation_date",
+          "operation_variation_reason",
+          "operation_variation_status",
+          "suspension_requested_flag",
+          "suspension_request_date",
+          "suspension_start_date",
+          "suspension_end_date",
+          "suspension_resolution_date",
+          "suspension_reason",
+          "renegotiation_flag",
+          "consolidation_flag",
+          "consolidation_purpose",
+          "consolidated_amount",
+          "residual_debt_before_consolidation"
+        ]
+      }
+    ]
+  },
+  "v1_coverage": {
+    "required_observed_fields": [
+      "operation_id",
+      "fund_code",
+      "fund_section",
+      "guarantee_type",
+      "guarantee_subtype",
+      "process_type",
+      "aid_regime",
+      "lender_name",
+      "beneficiary_name",
+      "beneficiary_vat",
+      "beneficiary_tax_code",
+      "guarantee_issue_date",
+      "guarantee_percentage",
+      "guarantee_amount",
+      "loan_amount",
+      "loan_contract_date",
+      "loan_disbursement_date",
+      "risk_event_type",
+      "risk_event_date",
+      "first_default_date",
+      "exposure_detection_date",
+      "risk_event_notice_date_to_mcc",
+      "recovery_start_act_date",
+      "recovery_start_act_sent_date",
+      "claim_type",
+      "claim_submission_date",
+      "claim_amount",
+      "claim_guarantee_amount",
+      "exposure_total_amount",
+      "exposure_measurement_date",
+      "decl_no_concordato",
+      "decl_no_difficolta",
+      "decl_no_inadempienze",
+      "decl_no_pregiudizievoli"
+    ],
+    "required_availability_fields": [
+      "doc_application_present",
+      "doc_admission_letter_present",
+      "doc_financing_contract_present",
+      "doc_disbursement_act_present",
+      "doc_decl_no_concordato_present"
+    ],
+    "required_legacy_facts": [
+      "date_application",
+      "date_admission",
+      "date_contract",
+      "date_disbursement",
+      "amount_claimed",
+      "amount_guarantee",
+      "decl_no_concordato"
+    ],
+    "legacy_aliases": {
+      "date_application": [
+        "date_application",
+        "application_date"
+      ],
+      "date_admission": [
+        "date_admission",
+        "guarantee_issue_date"
+      ],
+      "date_contract": [
+        "date_contract",
+        "loan_contract_date"
+      ],
+      "date_disbursement": [
+        "date_disbursement",
+        "loan_disbursement_date"
+      ],
+      "amount_claimed": [
+        "amount_claimed",
+        "claim_amount"
+      ],
+      "amount_guarantee": [
+        "amount_guarantee",
+        "claim_guarantee_amount",
+        "guarantee_amount"
+      ],
+      "date_bank_resolution": [
+        "date_bank_resolution",
+        "loan_resolution_bank_date"
+      ],
+      "date_delibera": [
+        "date_delibera",
+        "guarantee_resolution_date"
+      ],
+      "decl_no_concordato": [
+        "decl_no_concordato"
+      ]
+    },
+    "failure_codes": {
+      "missing_fact": "COV_REQUIRED_FACT_MISSING:<field_name>",
+      "missing_doc": "COV_REQUIRED_DOC_MISSING:<field_name_or_doc_kind>"
+    }
+  },
+  "v3_rules": {
+    "gate": {
+      "gate_id": "GATE-EP-1",
+      "field": "ep_status",
+      "operator": "eq",
+      "required_value": "EP_KNOWN",
+      "if_not_met": "NOT_EVALUATED"
+    },
+    "rules": [
+      {
+        "rule_id": "V3-001",
+        "severity": "FAIL",
+        "fields": [
+          "date_admission",
+          "date_application"
+        ],
+        "condition": "date_admission >= date_application",
+        "reason_code_on_fail": "R_DATE_ADMISSION_BEFORE_APPLICATION",
+        "outcome_on_fail": "BLOCK"
+      },
+      {
+        "rule_id": "V3-003",
+        "severity": "FAIL",
+        "fields": [
+          "date_disbursement",
+          "date_contract"
+        ],
+        "condition": "date_disbursement >= date_contract",
+        "reason_code_on_fail": "R_DISBURSEMENT_BEFORE_CONTRACT",
+        "outcome_on_fail": "BLOCK"
+      },
+      {
+        "rule_id": "V3-013",
+        "severity": "FAIL",
+        "fields": [
+          "amount_claimed",
+          "amount_guarantee"
+        ],
+        "condition": "amount_claimed <= amount_guarantee",
+        "reason_code_on_fail": "R_CLAIMED_GT_GUARANTEE",
+        "outcome_on_fail": "BLOCK"
+      },
+      {
+        "rule_id": "V3-016",
+        "severity": "FAIL",
+        "fields": [
+          "decl_no_concordato"
+        ],
+        "condition": "decl_no_concordato in ['DV_TRUE', true]",
+        "reason_code_on_fail": "R_CONCORDATO_NOT_OK",
+        "outcome_on_fail": "BLOCK"
+      },
+      {
+        "rule_id": "V3-024",
+        "severity": "WARN",
+        "fields": [
+          "date_delibera",
+          "date_bank_resolution"
+        ],
+        "condition": "date_delibera same_day date_bank_resolution",
+        "reason_code_on_fail": "W_DATE_MISMATCH_DELIBERA",
+        "outcome_on_fail": "REVIEW"
+      }
+    ],
+    "permit_conditions": [
+      "ep_status == EP_KNOWN",
+      "date_admission >= date_application",
+      "date_disbursement >= date_contract",
+      "amount_claimed <= amount_guarantee",
+      "decl_no_concordato in ['DV_TRUE', true]",
+      "date_delibera == date_bank_resolution"
+    ],
+    "review_conditions": [
+      "all FAIL rules pass",
+      "date_delibera != date_bank_resolution"
+    ],
+    "block_conditions": [
+      "date_admission < date_application",
+      "date_disbursement < date_contract",
+      "amount_claimed > amount_guarantee",
+      "decl_no_concordato not in ['DV_TRUE', true]"
+    ]
+  }
+}

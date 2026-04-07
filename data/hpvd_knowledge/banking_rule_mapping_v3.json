@@ -1,0 +1,73 @@
+{
+  "mapping_id": "MAP-BANKING-V3-RULES",
+  "name": "Banking V3 Rule Mapping",
+  "description": "Gate and rules for V3 policy evaluation in the banking sector.",
+  "sector": "banking",
+  "gate": {
+    "gate_id": "GATE-EP-1",
+    "field": "ep_status",
+    "operator": "eq",
+    "required_value": "EP_KNOWN",
+    "if_not_met": "NOT_EVALUATED"
+  },
+  "rules": [
+    {
+      "rule_id": "V3-001",
+      "severity": "FAIL",
+      "fields": ["date_admission", "date_application"],
+      "condition": "date_admission >= date_application",
+      "reason_code_on_fail": "R_DATE_ADMISSION_BEFORE_APPLICATION",
+      "outcome_on_fail": "BLOCK"
+    },
+    {
+      "rule_id": "V3-003",
+      "severity": "FAIL",
+      "fields": ["date_disbursement", "date_contract"],
+      "condition": "date_disbursement >= date_contract",
+      "reason_code_on_fail": "R_DISBURSEMENT_BEFORE_CONTRACT",
+      "outcome_on_fail": "BLOCK"
+    },
+    {
+      "rule_id": "V3-013",
+      "severity": "FAIL",
+      "fields": ["amount_claimed", "amount_guarantee"],
+      "condition": "amount_claimed <= amount_guarantee",
+      "reason_code_on_fail": "R_CLAIMED_GT_GUARANTEE",
+      "outcome_on_fail": "BLOCK"
+    },
+    {
+      "rule_id": "V3-016",
+      "severity": "FAIL",
+      "fields": ["decl_no_concordato"],
+      "condition": "decl_no_concordato in ['DV_TRUE', true]",
+      "reason_code_on_fail": "R_CONCORDATO_NOT_OK",
+      "outcome_on_fail": "BLOCK"
+    },
+    {
+      "rule_id": "V3-024",
+      "severity": "WARN",
+      "fields": ["date_delibera", "date_bank_resolution"],
+      "condition": "date_delibera same_day date_bank_resolution",
+      "reason_code_on_fail": "W_DATE_MISMATCH_DELIBERA",
+      "outcome_on_fail": "REVIEW"
+    }
+  ],
+  "permit_conditions": [
+    "ep_status == EP_KNOWN",
+    "date_admission >= date_application",
+    "date_disbursement >= date_contract",
+    "amount_claimed <= amount_guarantee",
+    "decl_no_concordato in ['DV_TRUE', true]",
+    "date_delibera == date_bank_resolution"
+  ],
+  "review_conditions": [
+    "all FAIL rules pass",
+    "date_delibera != date_bank_resolution"
+  ],
+  "block_conditions": [
+    "date_admission < date_application",
+    "date_disbursement < date_contract",
+    "amount_claimed > amount_guarantee",
+    "decl_no_concordato not in ['DV_TRUE', true]"
+  ]
+}

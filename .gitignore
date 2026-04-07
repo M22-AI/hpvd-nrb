@@ -70,6 +70,7 @@ data_raw/
 model_results/
 saved_models/
 sources/
+.env
 
 # OS
 Thumbs.db

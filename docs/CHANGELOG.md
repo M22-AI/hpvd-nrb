@@ -2,7 +2,30 @@
 
 ---
 
-## v1.0.0-alpha2 — Manithy v1 Architecture Pivot — Current
+## v1.0.0-alpha3 — HPVD REST API + KL Integration — Current
+
+**Released:** April 2026
+
+### Capabilities Delivered (alpha3)
+
+| Capability | Status | Details |
+|-----------|--------|---------|
+| FastAPI REST API layer | ✅ | `POST /query` (J13 → PipelineOutput), `GET /health` |
+| KLCorpusLoader | ✅ | Load corpus dari KL REST API saat startup (httpx sync, 6-step flow) |
+| object_type inference | ✅ | Infer dari isi dokumen: `policy_id` / `product_id` / `mapping_id` / `doc_type` |
+| `.env` support | ✅ | `KL_API_KEY`, `KL_BASE_URL`, `KL_DOMAIN` via python-dotenv |
+| httpx HTTP client | ✅ | Sync HTTP client untuk semua KL API calls |
+
+### Known Limitations (alpha3)
+
+- Corpus reload hanya saat startup (tidak ada hot reload)
+- Tidak ada auth untuk endpoint HPVD (internal NRB use only)
+- `object_type` di-infer dari content, bukan dari KL `document_type` metadata
+- Hanya support satu domain/sector per instance
+
+---
+
+## v1.0.0-alpha2 — Manithy v1 Architecture Pivot
 
 **Released:** April 2026
 
