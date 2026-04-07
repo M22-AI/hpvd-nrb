@@ -1,13 +1,13 @@
 # Manithy Integration Guide
 
-> Dokumen ini menjelaskan peran HPVD dalam pipeline **Manithy v1** — sistem Deterministic Attestation multi-sektor (Banking, Finance, Chatbot) — mencakup posisi HPVD di NRB, arsitektur multi-strategy, J-files reference, VectorState format (Core layer), dan integrasi Knowledge Layer.
+> This document explains the role of HPVD in the **Manithy v1** pipeline — a multi-sector Deterministic Attestation system (Banking, Finance, Chatbot) — covering HPVD’s position in NRB, multi-strategy architecture, J-files reference, VectorState format (Core layer), and Knowledge Layer integration.
 
 ---
 
-## Daftar Isi
+## Table of Contents
 
 1. [Manithy Pipeline Overview](#1-manithy-pipeline-overview)
-2. [HPVD dalam Pipeline — NRB Stage](#2-hpvd-dalam-pipeline--nrb-stage)
+2. [HPVD in the Pipeline — NRB Stage](#2-hpvd-in-the-pipeline--nrb-stage)
 3. [Multi-Domain Strategy Architecture](#3-multi-domain-strategy-architecture)
 4. [J-Files Reference](#4-j-files-reference)
 5. [VectorState Format (Core Layer — J06)](#5-vectorstate-format-core-layer--j06)
@@ -17,7 +17,7 @@
 
 ## 1. Manithy Pipeline Overview
 
-Pipeline Manithy v1 tersusun menjadi dua domain besar yang dipisahkan oleh boundary `t-1`:
+The Manithy v1 pipeline is structured into two major domains separated by the `t-1` boundary:
 
 ```
 [ INPUT ]
@@ -69,9 +69,9 @@ Pipeline Manithy v1 tersusun menjadi dua domain besar yang dipisahkan oleh bound
                      └───────────────────────────┘
 ```
 
-**Ringkasan komponen per layer:**
+**Summary of components per layer:**
 
-| Layer | Komponen | Input | Output |
+| Layer | Component | Input | Output |
 |-------|----------|-------|--------|
 | NRB | Parser | request + files | observed_data + documents |
 | NRB | **HPVD** | observed_data + sector | candidates [{type, data, provenance}] |
@@ -84,18 +84,18 @@ Pipeline Manithy v1 tersusun menjadi dua domain besar yang dipisahkan oleh bound
 | Core | V3 (J10) | V1 result + rules | PERMIT / BLOCK / NOT_EVALUATED |
 | Core | Evidence Pack (J11) | decision + hash chain | proof artifact |
 
-**Catatan penting:**
-- HPVD beroperasi di **NRB**, sebelum Core, bukan setelah Core.
-- `J13 (PostCoreQuery)` di Core spec adalah trigger untuk downstream setelah Core selesai — ini BERBEDA dengan J13 di `HPVDPipelineEngine` (yang adalah query format masuk ke adapter layer HPVD).
-- HPVD tidak membuat keputusan. Output-nya adalah candidates yang akan diproses PMR.
+**Important notes:**
+- HPVD operates in **NRB**, before Core, not after Core.
+- `J13 (PostCoreQuery)` in the Core spec is the trigger for downstream after Core completes — this is DIFFERENT from J13 in `HPVDPipelineEngine` (which is the incoming query format to the HPVD adapter layer).
+- HPVD does not make decisions. Its output is candidates to be processed by PMR.
 
 ---
 
-## 2. HPVD dalam Pipeline — NRB Stage
+## 2. HPVD in the Pipeline — NRB Stage
 
 ### NRB Step 1 — Parser (Sector-Specific)
 
-Parser menerima request + files dan menghasilkan `observed_data`:
+The Parser receives request + files and produces `observed_data`:
 
 ```json
 {
@@ -117,19 +117,19 @@ Parser menerima request + files dan menghasilkan `observed_data`:
 }
 ```
 
-Parser adalah sector-specific (`ParserBanking`, `ParserChatbot`, `ParserFinance`). NRBOrchestrator memilih parser berdasarkan `sector` dari request.
+The Parser is sector-specific (`ParserBanking`, `ParserChatbot`, `ParserFinance`). NRBOrchestrator selects the parser based on the `sector` from the request.
 
 ### NRB Step 2 — HPVD (Knowledge Retrieval)
 
-HPVD menerima `observed_data + metadata.sector` dari Parser dan me-retrieve knowledge yang relevan dari Knowledge Layer.
+HPVD receives `observed_data + metadata.sector` from the Parser and retrieves relevant knowledge from the Knowledge Layer.
 
-**3 tahap internal HPVD:**
+**Three internal stages in HPVD:**
 
-1. **Sector Filter** — ambil semua knowledge objects dengan matching `sector`
-2. **Field-Based Matching** — cocokkan field di `observed_data` (e.g., `loan_amount`, `income`) dengan policy feature index
-3. **Mandatory Retrieval** — selalu sertakan `rule_mapping` yang cocok dengan sektor
+1. **Sector Filter** — retrieve all knowledge objects with matching `sector`
+2. **Field-Based Matching** — match fields in `observed_data` (e.g., `loan_amount`, `income`) with the policy feature index
+3. **Mandatory Retrieval** — always include the `rule_mapping` that matches the sector
 
-**Output HPVD:**
+**HPVD Output:**
 
 ```json
 {
@@ -170,13 +170,13 @@ HPVD menerima `observed_data + metadata.sector` dari Parser dan me-retrieve know
 
 ### NRB Step 3 — PMR (Hypothesis Construction)
 
-PMR menerima `observed_data + candidates` dan membangun hypotheses:
-- Apa field yang seharusnya ada (dari rule_mapping)?
-- Apa yang present vs missing?
+PMR receives `observed_data + candidates` and builds hypotheses:
+- Which fields are supposed to be present (from rule_mapping)?
+- What is present vs missing?
 
 ### NRB Step 4 — Knowledge Builder (Epistemic Structuring)
 
-Knowledge Builder menghasilkan epistemic state:
+Knowledge Builder produces the epistemic state:
 
 ```json
 {
@@ -190,7 +190,7 @@ Knowledge Builder menghasilkan epistemic state:
 
 ## 3. Multi-Domain Strategy Architecture
 
-HPVD adalah retrieval layer yang di-dispatch ke strategy berbeda berdasarkan `scope.domain` di J13.
+HPVD is a retrieval layer that dispatches to different strategies based on `scope.domain` in J13.
 
 ```
 ┌───────────────────────────────────────────────────────┐
@@ -215,18 +215,18 @@ HPVD adalah retrieval layer yang di-dispatch ke strategy berbeda berdasarkan `sc
        J16         J16            J16    ← grouped by type/family
 ```
 
-**Prinsip:**
-- Input contract sama: J13 (`query_id`, `scope.domain`, `observed_data` / `query_payload`)
-- Output contract sama: J14/J15/J16
-- `KnowledgeRetrievalStrategy` — **primary strategy** untuk Banking/Finance/Chatbot sector use cases
-- `FinanceRetrievalStrategy` — untuk capital markets / OHLCV time series use cases (market data)
-- `DocumentRetrievalStrategy` — untuk full-text document retrieval
-- Non-binding principle berlaku di semua strategy
+**Principles:**
+- Input contract is the same: J13 (`query_id`, `scope.domain`, `observed_data` / `query_payload`)
+- Output contract is the same: J14/J15/J16
+- `KnowledgeRetrievalStrategy` — **primary strategy** for Banking/Finance/Chatbot sector use cases
+- `FinanceRetrievalStrategy` — for capital markets / OHLCV time series use cases (market data)
+- `DocumentRetrievalStrategy` — for full-text document retrieval
+- The non-binding principle applies to all strategies
 
 ### Concept Mapping: Knowledge ↔ Finance ↔ Document
 
-| Konsep | Knowledge | Finance (Market Data) | Document |
-|--------|-----------|----------------------|----------|
+| Concept | Knowledge | Finance (Market Data) | Document |
+|--------|-----------|-----------------------|----------|
 | Input | observed_data + sector | 60×45 trajectory matrix | Text / chunks |
 | Embedding | Field keywords | PCA → 256-d | Sentence-transformer → 384-d |
 | Pre-filter | Sector tag | Regime tuple | Topic category |
@@ -239,9 +239,9 @@ HPVD adalah retrieval layer yang di-dispatch ke strategy berbeda berdasarkan `sc
 
 ## 4. J-Files Reference
 
-### J13 — Knowledge Query (input ke HPVDPipelineEngine)
+### J13 — Knowledge Query (input to HPVDPipelineEngine)
 
-> **Catatan:** J13 di codebase ini adalah format query masuk ke `HPVDPipelineEngine`, bukan "PostCoreQuery" Core layer. Nama tetap dipertahankan untuk backward compatibility.
+> **Note:** In this codebase, J13 is the incoming query format to `HPVDPipelineEngine`, not the Core layer "PostCoreQuery". The name is kept for backward compatibility.
 
 ```json
 {
@@ -262,9 +262,9 @@ HPVD adalah retrieval layer yang di-dispatch ke strategy berbeda berdasarkan `sc
 }
 ```
 
-Fields `observed_data` dan `sector` ditambahkan di Manithy v1. Fields lama (`query_payload`, `allowed_topics`, `allowed_corpora`) tetap ada untuk backward compatibility dengan `FinanceRetrievalStrategy` dan `DocumentRetrievalStrategy`.
+Fields `observed_data` and `sector` were added in Manithy v1. Legacy fields (`query_payload`, `allowed_topics`, `allowed_corpora`) are kept for backward compatibility with `FinanceRetrievalStrategy` and `DocumentRetrievalStrategy`.
 
-### J14 — RetrievalRaw (output KnowledgeRetrievalStrategy)
+### J14 — RetrievalRaw (KnowledgeRetrievalStrategy output)
 
 ```json
 {
@@ -353,15 +353,15 @@ Fields `observed_data` dan `sector` ditambahkan di Manithy v1. Fields lama (`que
 }
 ```
 
-> **Catatan J16:** `schema_id` dibiarkan `manithy.analog_family_assignment.v1` untuk backward compatibility dengan kode yang sudah ada. Dalam knowledge context, setiap "family" adalah group of candidates dengan tipe yang sama (policy/product/rule_mapping).
+> **J16 Note:** `schema_id` is left as `manithy.analog_family_assignment.v1` for backward compatibility with existing code. In the knowledge context, each "family" is a group of candidates with the same type (policy/product/rule_mapping).
 
 ---
 
 ## 5. VectorState Format (Core Layer — J06)
 
-> **Penting:** VectorState adalah output dari **Adapter di Core layer** (J06), BUKAN output HPVD. VectorState dibuat SETELAH boundary t-1, dari `observed_state` yang sudah di-freeze.
+> **Important:** VectorState is the output of the **Adapter in the Core layer** (J06), NOT the output of HPVD. VectorState is created AFTER the t-1 boundary, from the `observed_state` that has been frozen.
 
-VectorState adalah representasi biner dari observed_state untuk evaluasi oleh V1 (Coverage) dan V3 (Decision).
+VectorState is a binary representation of the observed_state for evaluation by V1 (Coverage) and V3 (Decision).
 
 ### 5.1 Metadata (kernel identity)
 
@@ -427,7 +427,7 @@ domain_state:
   availability: {liquidity_proxy_known, volatility_structure_known}
 ```
 
-### 5.5 Relasi VectorState dan HPVD
+### 5.5 Relationship between VectorState and HPVD
 
 ```
 NRB:
@@ -445,17 +445,17 @@ Core (J06 — VectorState):
   identity_verified: false ← dari UNKNOWN
 ```
 
-HPVD mengambil `policy` dan `rule_mapping` yang kemudian — melalui PMR dan Knowledge Builder — dipakai sebagai referensi untuk mengisi field availability di VectorState. HPVD sendiri tidak menulis ke VectorState.
+HPVD retrieves `policy` and `rule_mapping` which are then — via PMR and Knowledge Builder — used as references to populate availability fields in VectorState. HPVD itself does not write to VectorState.
 
 ---
 
 ## 6. Knowledge Layer Integration
 
-### 6.1 Peran Knowledge Layer dalam Manithy v1
+### 6.1 Role of the Knowledge Layer in Manithy v1
 
-Knowledge Layer adalah source-of-truth untuk semua knowledge objects yang di-retrieve oleh HPVD. Dalam MVP (Knowledge Starter), Knowledge Layer berisi:
+The Knowledge Layer is the source of truth for all knowledge objects retrieved by HPVD. In the MVP (Knowledge Starter), the Knowledge Layer contains:
 
-| Tipe | Contoh | Dipakai oleh |
+| Type | Example | Used by |
 |------|--------|-------------|
 | Policy | `policy_sme_loan_v1.json` | HPVD (Step 2 field matching) |
 | Product | `product_sme_loan_standard.json` | HPVD (Step 2 field matching) |
@@ -463,7 +463,7 @@ Knowledge Layer adalah source-of-truth untuk semua knowledge objects yang di-ret
 | Rule Mapping | `rule_mapping_sme_loan.json` | HPVD (Step 3 mandatory) |
 | Policy Feature Index | `policy_feature_index.json` | HPVD (Step 2 acceleration) |
 
-Pada Knowledge Starter (MVP), belum ada:
+In the Knowledge Starter (MVP), there are not yet:
 - Historical cases
 - Risk models
 - Learned patterns
@@ -524,19 +524,19 @@ class NRBOrchestrator:
 
 ### 6.4 Gap Analysis (KL Production)
 
-| # | Gap | Severity | Status | Dampak ke HPVD |
+| # | Gap | Severity | Status | Impact on HPVD |
 |:-:|-----|:--------:|--------|----------------|
-| G1 | Sector-based storage & retrieval | 🔴 Critical | MVP: in-memory | HPVD harus load dari file per sektor |
-| G2 | Policy versioning | 🟠 High | Belum ada | HPVD tidak bisa resolve versi policy |
-| G3 | Structured metadata (sector, product_type) | 🟠 High | Parsial | Filtering candidate pool terbatas |
-| G4 | Search / query endpoint | 🟡 Medium | Belum ada | Harus fetch semua objects, filter di client |
-| G5 | Snapshot pinning | 🟡 Medium | Belum ada | Determinism tidak bisa di-enforce cross-request |
+| G1 | Sector-based storage & retrieval | 🔴 Critical | MVP: in-memory | HPVD must load from files per sector |
+| G2 | Policy versioning | 🟠 High | Not yet available | HPVD cannot resolve policy versions |
+| G3 | Structured metadata (sector, product_type) | 🟠 High | Partial | Candidate pool filtering is limited |
+| G4 | Search / query endpoint | 🟡 Medium | Not yet available | Must fetch all objects and filter client-side |
+| G5 | Snapshot pinning | 🟡 Medium | Not yet available | Determinism cannot be enforced across requests |
 
-**Prioritas implementasi KL:**
-1. **MVP (saat ini):** In-memory load dari JSON files per sektor
-2. **Fase 1:** REST API dengan endpoint `GET /knowledge?sector=banking&type=policy`
-3. **Fase 2:** Versioning + snapshot pinning
-4. **Fase 3:** Semantic search endpoint
+**KL implementation priorities:**
+1. **MVP (current):** In-memory load from JSON files per sector
+2. **Phase 1:** REST API with endpoint `GET /knowledge?sector=banking&type=policy`
+3. **Phase 2:** Versioning + snapshot pinning
+4. **Phase 3:** Semantic search endpoint
 
 ---
 

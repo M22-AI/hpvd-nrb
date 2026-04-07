@@ -1,12 +1,12 @@
 # HPVD Core — Technical Reference
 
-> **HPVD (Hybrid Probabilistic Vector Database)** adalah knowledge retrieval engine domain-agnostik yang me-retrieve Policy, Product, Rule Mapping, dan Document Schema berdasarkan `observed_data` dari Parser. HPVD beroperasi di **NRB (Non-Binding Realm)** — sebelum Core, sesudah Parser. Semua output bersifat *candidates-only* (non-authoritative); PMR dan Knowledge Builder yang memproses lebih lanjut.
+> **HPVD (Hybrid Probabilistic Vector Database)** is a domain-agnostic knowledge retrieval engine that retrieves Policy, Product, Rule Mapping, and Document Schema based on `observed_data` from the Parser. HPVD operates in the **NRB (Non-Binding Realm)** — before Core, after the Parser. All outputs are *candidates-only* (non-authoritative); PMR and Knowledge Builder perform further processing.
 
 **Version:** 1.0.0-alpha2 | **Project:** Manithy v1 — Deterministic Attestation System
 
 ---
 
-## Daftar Isi
+## Table of Contents
 
 1. [System Context](#1-system-context)
 2. [Data Model — Knowledge Objects](#2-data-model--knowledge-objects)
@@ -67,11 +67,11 @@
 
 ## 2. Data Model — Knowledge Objects
 
-HPVD mengelola dan me-retrieve empat tipe knowledge object. Semua disimpan sebagai JSON dan diidentifikasi dengan `sector` tag untuk filtering.
+HPVD manages and retrieves four types of knowledge objects. All are stored as JSON and identified with a `sector` tag for filtering.
 
 ### 2.1 Policy
 
-Aturan eligibility dan compliance yang berlaku untuk sebuah sektor/produk.
+Eligibility and compliance rules that apply to a sector/product.
 
 ```json
 {
@@ -106,7 +106,7 @@ Aturan eligibility dan compliance yang berlaku untuk sebuah sektor/produk.
 
 ### 2.2 Product
 
-Informasi limit, tenor, bunga, dan aturan finansial dari sebuah produk.
+Information on limits, tenor, interest, and financial rules for a product.
 
 ```json
 {
@@ -130,7 +130,7 @@ Informasi limit, tenor, bunga, dan aturan finansial dari sebuah produk.
 
 ### 2.3 Rule Mapping
 
-Mapper antara field-field di observed state dengan requirement di V1 (Coverage) dan V3 (Decision) di Core layer.
+Mapper between fields in the observed state and the requirements in V1 (Coverage) and V3 (Decision) in the Core layer.
 
 ```json
 {
@@ -168,7 +168,7 @@ Mapper antara field-field di observed state dengan requirement di V1 (Coverage) 
 
 ### 2.4 Document Schema
 
-Struktur field yang diharapkan dari sebuah tipe dokumen. Dipakai oleh Parser dan HPVD untuk validasi availability.
+Expected field structure for a document type. Used by the Parser and HPVD to validate availability.
 
 ```json
 {
@@ -184,7 +184,7 @@ Struktur field yang diharapkan dari sebuah tipe dokumen. Dipakai oleh Parser dan
 
 ### 2.5 Policy Feature Index (Optional)
 
-Index tambahan untuk mempercepat field-based matching — memetakan nama field ke knowledge object yang relevan.
+Additional index to speed up field-based matching — maps field names to relevant knowledge objects.
 
 ```json
 {
@@ -204,37 +204,37 @@ Index tambahan untuk mempercepat field-based matching — memetakan nama field k
 
 ### 3.1 KnowledgeIndex
 
-`KnowledgeIndex` adalah in-memory store yang menyimpan semua knowledge objects, diorganisir per sektor. Mendukung lookup O(1) berdasarkan sektor, dan field matching O(F) di mana F = jumlah field di `observed_data`.
+`KnowledgeIndex` is an in-memory store that keeps all knowledge objects, organized per sector. It supports O(1) lookup by sector, and field matching O(F) where F = number of fields in `observed_data`.
 
-| Operation | Complexity | Keterangan |
+| Operation | Complexity | Description |
 |-----------|-----------|------------|
-| `add()` | O(1) | Insert ke sector bucket |
+| `add()` | O(1) | Insert into sector bucket |
 | `filter_by_sector()` | O(1) | Direct bucket lookup |
 | `match_by_fields()` | O(F × K) | F = observed fields, K = candidates per type |
 | `get_rule_mapping()` | O(1) | Mandatory — always retrieved |
 
-**Memory:** Proporsi terhadap ukuran knowledge corpus. Typical starter: < 1 MB.
+**Memory:** Proportional to the size of the knowledge corpus. Typical starter: < 1 MB.
 
 ### 3.2 Retrieval Strategy: KnowledgeRetrievalStrategy
 
-`KnowledgeRetrievalStrategy` mengimplementasikan `RetrievalStrategy` ABC dengan domain `"knowledge"`.
+`KnowledgeRetrievalStrategy` implements the `RetrievalStrategy` ABC with domain `"knowledge"`.
 
-| Step | Nama | Deskripsi |
-|------|------|-----------|
-| 1 | Sector Filter | Ambil semua knowledge objects dengan `sector` == `metadata.sector` |
-| 2 | Field-Based Matching | Cocokkan field-field di `observed_data` dengan `eligibility_rules` / `loan_constraints` |
-| 3 | Mandatory Retrieval | Selalu sertakan `rule_mapping` yang cocok dengan sektor |
-| 4 | Format Output | Wrap tiap object ke `KnowledgeCandidate({type, data, provenance})` |
+| Step | Name | Description |
+|------|------|------------|
+| 1 | Sector Filter | Take all knowledge objects with `sector` == `metadata.sector` |
+| 2 | Field-Based Matching | Match fields in `observed_data` with `eligibility_rules` / `loan_constraints` |
+| 3 | Mandatory Retrieval | Always include `rule_mapping` that matches the sector |
+| 4 | Format Output | Wrap each object into `KnowledgeCandidate({type, data, provenance})` |
 
 ### 3.3 Strategy Dispatcher
 
-`StrategyDispatcher` merutekan query berdasarkan `scope.domain` dari J13. Untuk knowledge retrieval, `domain = "knowledge"`. Finance market data tetap tersedia via `domain = "finance"` (lihat Section 9).
+`StrategyDispatcher` routes queries based on `scope.domain` from J13. For knowledge retrieval, `domain = "knowledge"`. Finance market data remains available via `domain = "finance"` (see Section 9).
 
 ---
 
 ## 4. Input & Output Contract
 
-### 4.1 Input (dari Parser via NRB Orchestrator)
+### 4.1 Input (from Parser via NRB Orchestrator)
 
 ```json
 {
@@ -256,7 +256,7 @@ Index tambahan untuk mempercepat field-based matching — memetakan nama field k
 }
 ```
 
-**Dalam pipeline adapter (HPVDPipelineEngine)**, input dikemas sebagai J13:
+**In the pipeline adapter (HPVDPipelineEngine)**, the input is packaged as J13:
 ```json
 {
   "query_id": "REQ_LOAN_0001",
@@ -266,7 +266,7 @@ Index tambahan untuk mempercepat field-based matching — memetakan nama field k
 }
 ```
 
-### 4.2 Output (ke PMR)
+### 4.2 Output (to PMR)
 
 ```json
 {
@@ -301,11 +301,11 @@ Index tambahan untuk mempercepat field-based matching — memetakan nama field k
 }
 ```
 
-**Invariants yang harus dijaga:**
-- `rule_mapping` **selalu** ada dalam output (mandatory).
-- Setiap candidate **harus** punya `type` dan `provenance`.
-- HPVD **tidak boleh** mengubah isi `observed_data`.
-- HPVD **tidak boleh** mengambil keputusan (allow/deny/conflict).
+**Invariants that must be preserved:**
+- `rule_mapping` **must always** be present in the output (mandatory).
+- Every candidate **must** have `type` and `provenance`.
+- HPVD **must not** modify the contents of `observed_data`.
+- HPVD **must not** make decisions (allow/deny/conflict).
 
 ---
 
@@ -348,14 +348,14 @@ Output: candidates list                total ~8ms
 
 ### 6.1 Knowledge Retrieval Test Scenarios
 
-| Test | Scenario | Yang Divalidasi |
-|------|----------|----------------|
-| K1 | Sector match | Banking query → hanya banking objects dikembalikan |
-| K2 | Field match | `loan_amount` di observed → SME loan policy & product dikembalikan |
-| K3 | Mandatory rule_mapping | Selalu ada rule_mapping meski field match kosong |
-| K4 | Provenance completeness | Semua candidates punya `type` dan `provenance` |
-| K5 | Empty sector | Sector tidak dikenal → empty candidates, tidak crash |
-| K6 | Determinism | Input sama → candidates sama (urutan dan isi) |
+| Test | Scenario | What is validated |
+|------|----------|-------------------|
+| K1 | Sector match | Banking query → only banking objects are returned |
+| K2 | Field match | `loan_amount` in observed → SME loan policy & product are returned |
+| K3 | Mandatory rule_mapping | There is always a rule_mapping even if field matches are empty |
+| K4 | Provenance completeness | All candidates have `type` and `provenance` |
+| K5 | Empty sector | Unknown sector → empty candidates, no crash |
+| K6 | Determinism | Same input → same candidates (order and content) |
 | K7 | Pipeline integration | J13 → HPVDPipelineEngine → J14(knowledge) → J15 → J16 |
 
 ### 6.2 Quality Metrics Targets
@@ -386,19 +386,19 @@ Output: candidates list                total ~8ms
 
 ### Knowledge Layer Parameters
 
-| Parameter | Default | Keterangan |
+| Parameter | Default | Description |
 |-----------|---------|------------|
 | `default_k` | 10 | Max candidates per type |
 | `mandatory_types` | `["rule_mapping"]` | Always included in output |
 | `sector_strict` | `True` | Reject cross-sector objects |
-| `enable_feature_index` | `True` | Gunakan policy_feature_index jika tersedia |
+| `enable_feature_index` | `True` | Use policy_feature_index if available |
 
 ### Legacy Finance Parameters (FinanceRetrievalStrategy only)
 
-| Parameter | Default | Keterangan |
+| Parameter | Default | Description |
 |-----------|---------|------------|
 | `embedding_dim` | 256 | PCA output dimension |
-| `trajectory_window` | 60 | Hari per trajectory |
+| `trajectory_window` | 60 | Days per trajectory |
 | `feature_count` | 45 | R45 features |
 | `min_aci` | 0.7 | Minimum ACI threshold |
 
@@ -472,15 +472,15 @@ python -m src.hpvd.cli search --index artifacts/ --domain knowledge --query quer
 
 ## 9. FinanceRetrievalStrategy Internals
 
-> **Scope:** Section ini hanya relevan untuk use case **capital markets / OHLCV time series**. Bukan primary HPVD interface.
+> **Scope:** This section is only relevant for **capital markets / OHLCV time series** use cases. It is not the primary HPVD interface.
 
-`FinanceRetrievalStrategy` adalah domain strategy yang membungkus `HPVDEngine` untuk pencarian analog historis berbasis trajectory matrix.
+`FinanceRetrievalStrategy` is a domain strategy that wraps `HPVDEngine` for historical analog search based on a trajectory matrix.
 
 ### 9.1 Trajectory: 60 × 45 Matrix
 
-Setiap trajectory merepresentasikan **60 hari trading × 45 engineered features (R45)**:
+Each trajectory represents **60 trading days × 45 engineered features (R45)**:
 
-| Block | Features | Count | Deskripsi |
+| Block | Features | Count | Description |
 |-------|----------|-------|-----------|
 | A | Returns | 8 | 1d/5d/10d/20d returns (plain & log) |
 | B | Trend | 10 | Slopes, R², MA crossovers |
@@ -491,7 +491,7 @@ Setiap trajectory merepresentasikan **60 hari trading × 45 engineered features 
 
 ### 9.2 HPVDInputBundle — Finance-Only Contract
 
-`HPVDInputBundle` adalah input container untuk `FinanceRetrievalStrategy`. Tidak digunakan oleh `KnowledgeRetrievalStrategy`.
+`HPVDInputBundle` is the input container for `FinanceRetrievalStrategy`. It is not used by `KnowledgeRetrievalStrategy`.
 
 ```json
 {

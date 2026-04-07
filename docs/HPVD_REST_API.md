@@ -1,41 +1,41 @@
-# HPVD REST API ó Deployment & Integration Guide
+# HPVD REST API ù Deployment & Integration Guide
 
-> Dokumen ini ditujukan untuk **team eksternal** (Parser, NRB, PMR) yang akan memanggil HPVD sebagai REST service dalam pipeline Manithy v1. Untuk arsitektur internal HPVD, lihat [HPVD_CORE.md](HPVD_CORE.md). Untuk posisi HPVD dalam pipeline Manithy, lihat [MANITHY_INTEGRATION.md](MANITHY_INTEGRATION.md).
+> This document is intended for **external teams** (Parser, NRB, PMR) that will call HPVD as a REST service in the Manithy v1 pipeline. For HPVD internal architecture, see [HPVD_CORE.md](HPVD_CORE.md). For HPVD's position in the Manithy pipeline, see [MANITHY_INTEGRATION.md](MANITHY_INTEGRATION.md).
 
 **Version:** 1.0.0-alpha3 | **Framework:** FastAPI + Uvicorn | **Python:** 3.10+
 
 ---
 
-## Daftar Isi
+## Table of Contents
 
 1. [Prerequisites](#1-prerequisites)
-2. [Setup & Konfigurasi](#2-setup--konfigurasi)
-3. [Menjalankan Server](#3-menjalankan-server)
+2. [Setup & Configuration](#2-setup--configuration)
+3. [Running the Server](#3-running-the-server)
 4. [Endpoints](#4-endpoints)
 5. [Request & Response Format (Parser SDK Output)](#5-request--response-format-parser-sdk-output)
-6. [Upload Knowledge Objects ke KL](#6-upload-knowledge-objects-ke-kl)
-7. [Common Errors & Solusi](#7-common-errors--solusi)
+6. [Upload Knowledge Objects to KL](#6-upload-knowledge-objects-to-kl)
+7. [Common Errors & Solutions](#7-common-errors--solutions)
 
 ---
 
 ## 1. Prerequisites
 
-| Kebutuhan | Versi minimum | Catatan |
+| Requirement | Minimum version | Notes |
 |-----------|--------------|---------|
-| Python | 3.10 | Sudah termasuk `venv` |
-| pip | terbaru | `pip install --upgrade pip` |
-| Akses internet | -- | Untuk fetch corpus dari KL saat startup |
-| KL API Key | -- | Format `kl_...`, minta ke tim KL |
+| Python | 3.10 | `venv` included |
+| pip | latest | `pip install --upgrade pip` |
+| Internet access | -- | Required to fetch corpus from KL at startup |
+| KL API Key | -- | `kl_...` format, request from the KL team |
 
 ---
 
-## 2. Setup & Konfigurasi
+## 2. Setup & Configuration
 
 ### 2.1 Clone & Install
 
 ```powershell
 git clone <repo-url>
-cd HPVD-M22
+cd hpvd-nrb
 
 python -m venv venv
 venv\Scripts\Activate.ps1
@@ -43,15 +43,15 @@ venv\Scripts\Activate.ps1
 pip install -e ".[api]"
 ```
 
-> Jika `pip install -e ".[api]"` gagal, install manual:
+> If `pip install -e ".[api]"` fails, install manually:
 > ```powershell
 > pip install fastapi>=0.110.0 uvicorn>=0.29.0 httpx>=0.27.0 python-dotenv
 > pip install -e .
 > ```
 
-### 2.2 Konfigurasi Environment
+### 2.2 Environment Configuration
 
-Buat file `.env` di root project (atau copy dari `.env.example`):
+Create a `.env` file in the project root (or copy from `.env.example`):
 
 ```env
 KL_API_KEY=kl_your_key_here
@@ -59,33 +59,33 @@ KL_BASE_URL=https://knowledge-layer-production.up.railway.app
 KL_DOMAIN=banking
 ```
 
-| Variable | Wajib | Keterangan |
+| Variable | Required | Description |
 |----------|-------|-----------|
-| `KL_API_KEY` | Ya | API key tenant KL (format `kl_...`) |
-| `KL_BASE_URL` | Tidak | Default: `https://knowledge-layer-production.up.railway.app` |
-| `KL_DOMAIN` | Tidak | Domain/sector yang di-load. Default: `banking` |
+| `KL_API_KEY` | Yes | KL tenant API key (`kl_...` format) |
+| `KL_BASE_URL` | No | Default: `https://knowledge-layer-production.up.railway.app` |
+| `KL_DOMAIN` | No | Domain/sector to load. Default: `banking` |
 
-> **Penting:** File `.env` sudah ada di `.gitignore` -- jangan commit file ini.
+> **Important:** The `.env` file is already in `.gitignore` -- do not commit this file.
 
 ---
 
-## 3. Menjalankan Server
+## 3. Running the Server
 
 ```powershell
 uvicorn src.hpvd.api:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-> **Windows:** Selalu gunakan `127.0.0.1`, bukan `0.0.0.0`, untuk akses dari browser lokal.
-> `0.0.0.0` dipakai jika server harus bisa diakses dari mesin lain di jaringan (misalnya Docker atau VM).
+> **Windows:** Always use `127.0.0.1`, not `0.0.0.0`, for local browser access.
+> `0.0.0.0` is used when the server must be accessible from other machines on the network (for example Docker or VM).
 
-Saat startup, HPVD akan:
+At startup, HPVD will:
 1. Load `.env`
-2. Fetch semua dokumen dari KL (`GET /documents?domain=banking`)
-3. Parse dan infer `object_type` dari isi setiap dokumen
+2. Fetch all documents from KL (`GET /documents?domain=banking`)
+3. Parse and infer `object_type` from each document content
 4. Build in-memory index
-5. Log jumlah objects yang berhasil di-load
+5. Log the number of objects successfully loaded
 
-Log startup yang normal:
+Expected normal startup logs:
 
 ```
 INFO:     Application startup complete.
@@ -93,23 +93,23 @@ INFO:hpvd.kl_loader:KLCorpusLoader: loaded 3 objects, skipped 1 (domain=banking)
 INFO:src.hpvd.api:HPVD API ready -- 3 knowledge objects loaded (domain=banking)
 ```
 
-### Verifikasi
+### Verification
 
 ```powershell
-# Buka di browser
+# Open in browser
 http://127.0.0.1:8000/health
 
-# Atau via PowerShell
+# Or via PowerShell
 Invoke-RestMethod -Uri http://127.0.0.1:8000/health
 ```
 
-Response yang diharapkan:
+Expected response:
 
 ```json
 {"status": "ok", "corpus_size": 3, "domain": "banking"}
 ```
 
-> `corpus_size: 0` berarti tidak ada dokumen yang berhasil di-load dari KL. Lihat [Section 7](#7-common-errors--solusi).
+> `corpus_size: 0` means no documents were successfully loaded from KL. See [Section 7](#7-common-errors--solutions).
 
 ---
 
@@ -117,7 +117,7 @@ Response yang diharapkan:
 
 ### `GET /health`
 
-Liveness check dan status corpus.
+Liveness check and corpus status.
 
 **Response:**
 
@@ -129,21 +129,21 @@ Liveness check dan status corpus.
 }
 ```
 
-| Field | Tipe | Keterangan |
+| Field | Type | Description |
 |-------|------|-----------|
-| `status` | string | Selalu `"ok"` jika server berjalan |
-| `corpus_size` | int | Jumlah knowledge objects yang ter-load |
-| `domain` | string | Domain yang aktif (dari `KL_DOMAIN`) |
+| `status` | string | Always `"ok"` when the server is running |
+| `corpus_size` | int | Number of loaded knowledge objects |
+| `domain` | string | Active domain (from `KL_DOMAIN`) |
 
 ---
 
 ### `POST /query`
 
-Terima output Parser SDK, jalankan pipeline retrieval, return J14 + J15 + J16.
+Accept Parser SDK output, run retrieval pipeline, return J14 + J15 + J16.
 
 **Request:** `Content-Type: application/json`
 
-Input adalah output langsung dari `banking_parser_sdk` -- lihat [Section 5](#5-request--response-format-parser-sdk-output) untuk format lengkap.
+Input is direct output from `banking_parser_sdk` -- see [Section 5](#5-request--response-format-parser-sdk-output) for full format.
 
 **Response:**
 
@@ -157,18 +157,18 @@ Input adalah output langsung dari `banking_parser_sdk` -- lihat [Section 5](#5-r
 
 **HTTP Status Codes:**
 
-| Code | Kondisi |
+| Code | Condition |
 |------|---------|
-| `200` | Sukses |
-| `400` | Request malformed -- `query_id` atau `sector` missing |
-| `503` | Corpus kosong -- KL tidak bisa dijangkau saat startup |
-| `500` | Internal error tidak terduga |
+| `200` | Success |
+| `400` | Malformed request -- `query_id` or `sector` missing |
+| `503` | Empty corpus -- KL unreachable at startup |
+| `500` | Unexpected internal error |
 
 ---
 
 ## 5. Request & Response Format (Parser SDK Output)
 
-### 5.1 Posisi dalam Pipeline
+### 5.1 Position in the Pipeline
 
 ```
 banking_parser_sdk
@@ -184,7 +184,7 @@ banking_parser_sdk
                                     {"j14": ..., "j15": ..., "j16": ...}
 ```
 
-HPVD menerima format Parser SDK secara langsung. Adaptasi ke format pipeline internal dilakukan di dalam HPVD -- caller tidak perlu tahu detail implementasi internal.
+HPVD accepts the Parser SDK format directly. Adaptation to internal pipeline format is handled inside HPVD -- the caller does not need internal implementation details.
 
 ### 5.2 Request Body
 
@@ -205,16 +205,16 @@ HPVD menerima format Parser SDK secara langsung. Adaptasi ke format pipeline int
 }
 ```
 
-| Field | Tipe | Wajib | Keterangan |
+| Field | Type | Required | Description |
 |-------|------|-------|-----------|
-| `query_id` | string | **Ya** | Identifier unik per request, dibuat oleh caller |
-| `sector` | string | **Ya** | Nama sector: `"banking"`, `"finance"`, `"chatbot"` -- harus cocok dengan `KL_DOMAIN` |
-| `observed` | object | Direkomendasikan | Merged field values dari semua Parser runs. Makin banyak field relevan, makin akurat scoring |
-| `availability` | object | Tidak | Epistemic flags dari Parser SDK. Diterima HPVD tapi tidak dipakai -- diteruskan ke PMR dan Knowledge Builder di layer berikutnya |
+| `query_id` | string | **Yes** | Unique identifier per request, created by caller |
+| `sector` | string | **Yes** | Sector name: `"banking"`, `"finance"`, `"chatbot"` -- must match `KL_DOMAIN` |
+| `observed` | object | Recommended | Merged field values from all Parser runs. More relevant fields generally improve scoring accuracy |
+| `availability` | object | No | Epistemic flags from Parser SDK. Accepted by HPVD but unused -- forwarded to PMR and Knowledge Builder in the next layer |
 
-> **Catatan `availability`:** HPVD adalah knowledge retrieval engine -- tugasnya hanya retrieve Policy/Product/RuleMapping yang relevan berdasarkan `observed`. Evaluasi `availability` adalah tanggung jawab PMR dan Knowledge Builder.
+> **Note on `availability`:** HPVD is a knowledge retrieval engine -- its job is only to retrieve relevant Policy/Product/RuleMapping based on `observed`. `availability` evaluation is the responsibility of PMR and Knowledge Builder.
 
-### 5.3 Contoh dengan `banking_parser_sdk`
+### 5.3 Example with `banking_parser_sdk`
 
 ```python
 from banking_parser_sdk import run_parser, build_hpvd_query
@@ -235,7 +235,7 @@ response = httpx.post("http://127.0.0.1:8000/query", json=payload)
 result = response.json()
 ```
 
-### 5.4 Contoh PowerShell
+### 5.4 PowerShell Example
 
 ```powershell
 Invoke-RestMethod -Uri http://127.0.0.1:8000/query `
@@ -292,7 +292,7 @@ Invoke-RestMethod -Uri http://127.0.0.1:8000/query `
 }
 ```
 
-> `rule_mapping` **selalu** disertakan dalam candidates, tanpa memandang scoring -- ini adalah mandatory retrieval per spec HPVD.
+> `rule_mapping` is **always** included in candidates, regardless of scoring -- this is mandatory retrieval per HPVD spec.
 
 ### 5.6 Response -- J16 (Family Assignment)
 
@@ -320,22 +320,22 @@ Invoke-RestMethod -Uri http://127.0.0.1:8000/query `
 
 ---
 
-## 6. Upload Knowledge Objects ke KL
+## 6. Upload Knowledge Objects to KL
 
-Untuk menambah atau update data knowledge, gunakan script `scripts/seed_hpvd_knowledge.py`. **Setelah upload, server harus di-restart** agar corpus ter-reload.
+To add or update knowledge data, use the `scripts/seed_hpvd_knowledge.py` script. **After upload, the server must be restarted** so the corpus reloads.
 
-### 6.1 Format Dokumen yang Didukung
+### 6.1 Supported Document Format
 
-Setiap file JSON harus punya **salah satu** key berikut di level root:
+Each JSON file must contain **one of** the following keys at root level:
 
-| Key | object_type | Kapan dipakai |
+| Key | object_type | When to use |
 |-----|-------------|--------------|
-| `policy_id` | `policy` | Aturan eligibility dan compliance |
-| `product_id` | `product` | Konfigurasi produk (limit, tenor, rate) |
-| `mapping_id` | `rule_mapping` | Gate + rules evaluasi (V3) |
-| `doc_type` | `document_schema` | Inventori field yang dikenal sistem |
+| `policy_id` | `policy` | Eligibility and compliance rules |
+| `product_id` | `product` | Product configuration (limit, tenor, rate) |
+| `mapping_id` | `rule_mapping` | Evaluation gate + rules (V3) |
+| `doc_type` | `document_schema` | Inventory of system-recognized fields |
 
-Dokumen dengan struktur lain (tidak punya salah satu key di atas) akan di-skip dengan WARNING.
+Documents with other structures (without one of the keys above) will be skipped with a WARNING.
 
 ### 6.2 Upload via Script
 
@@ -353,7 +353,7 @@ python scripts/seed_hpvd_knowledge.py --files data/my_policy.json data/my_rules.
 python scripts/seed_hpvd_knowledge.py --dir data/hpvd_knowledge --api-key kl_xxx
 ```
 
-Satu file boleh berisi satu object atau array beberapa objects:
+A file may contain one object or an array of multiple objects:
 
 ```json
 [
@@ -364,48 +364,48 @@ Satu file boleh berisi satu object atau array beberapa objects:
 
 ---
 
-## 7. Common Errors & Solusi
+## 7. Common Errors & Solutions
 
-### E1 -- `corpus_size: 0` saat startup
+### E1 -- `corpus_size: 0` at startup
 
-**Gejala:** `/health` mengembalikan `corpus_size: 0`. Log menunjukkan semua dokumen di-skip.
+**Symptoms:** `/health` returns `corpus_size: 0`. Logs show all documents are skipped.
 
-**Penyebab & Solusi:**
+**Causes & Solutions:**
 
-| Penyebab | Indikator di log | Solusi |
+| Cause | Log indicator | Solution |
 |----------|-----------------|--------|
-| `KL_API_KEY` tidak diset | `KL_API_KEY is not set` | Tambahkan ke `.env` |
-| KL tidak bisa dijangkau | `KL /documents request failed` | Cek koneksi internet, cek status KL di Railway |
-| Semua dokumen body kosong | `raw_text is not valid JSON ... char 0` | Dokumen di KL diupload tanpa `raw_text` -- re-upload menggunakan script seed |
-| `object_type` tidak bisa di-infer | `Cannot infer object_type ... keys: [...]` | Dokumen tidak punya key `policy_id`/`product_id`/`mapping_id`/`doc_type` -- fix struktur JSON lalu re-upload |
+| `KL_API_KEY` not set | `KL_API_KEY is not set` | Add it to `.env` |
+| KL unreachable | `KL /documents request failed` | Check internet connectivity, check KL status on Railway |
+| All document bodies are empty | `raw_text is not valid JSON ... char 0` | Documents in KL were uploaded without `raw_text` -- re-upload using the seed script |
+| `object_type` cannot be inferred | `Cannot infer object_type ... keys: [...]` | Document does not have `policy_id`/`product_id`/`mapping_id`/`doc_type` key -- fix JSON structure then re-upload |
 
 ---
 
-### E2 -- `503 Service Unavailable` saat `POST /query`
+### E2 -- `503 Service Unavailable` on `POST /query`
 
-**Gejala:**
+**Symptoms:**
 
 ```json
-{"detail": "Knowledge corpus is empty ó Knowledge Layer was unreachable at startup."}
+{"detail": "Knowledge corpus is empty ù Knowledge Layer was unreachable at startup."}
 ```
 
-**Penyebab:** Server startup sukses tapi corpus kosong (lihat E1).
+**Cause:** Server startup succeeded but corpus is empty (see E1).
 
-**Solusi:** Atasi E1 terlebih dahulu, kemudian restart server.
+**Solution:** Resolve E1 first, then restart the server.
 
 ---
 
 ### E3 -- `400 Bad Request`
 
-**Gejala:**
+**Symptoms:**
 
 ```json
 {"detail": "field required"}
 ```
 
-**Penyebab:** Request body tidak menyertakan `query_id` atau `sector`.
+**Cause:** Request body does not include `query_id` or `sector`.
 
-**Solusi:** Pastikan kedua field tersebut ada di body:
+**Solution:** Ensure both fields are present in the body:
 
 ```json
 {
@@ -417,19 +417,19 @@ Satu file boleh berisi satu object atau array beberapa objects:
 
 ---
 
-### E4 -- Browser loading tidak selesai (hang)
+### E4 -- Browser loading never finishes (hang)
 
-**Gejala:** Buka `http://localhost:8000/health` di browser Windows -- tidak pernah selesai.
+**Symptoms:** Open `http://localhost:8000/health` in Windows browser -- it never finishes.
 
-**Penyebab:** Windows meresol `localhost` ke IPv6 (`::1`) tapi server hanya listen di IPv4.
+**Cause:** Windows resolves `localhost` to IPv6 (`::1`) but the server listens only on IPv4.
 
-**Solusi:** Gunakan IP eksplisit:
+**Solution:** Use explicit IP:
 
 ```
 http://127.0.0.1:8000/health
 ```
 
-Atau jalankan server dengan bind ke `127.0.0.1`:
+Or run the server with bind to `127.0.0.1`:
 
 ```powershell
 uvicorn src.hpvd.api:app --host 127.0.0.1 --port 8000 --reload
@@ -437,21 +437,21 @@ uvicorn src.hpvd.api:app --host 127.0.0.1 --port 8000 --reload
 
 ---
 
-### E5 -- Port 8000 sudah dipakai
+### E5 -- Port 8000 already in use
 
-**Gejala:**
+**Symptoms:**
 
 ```
 ERROR: [Errno 10048] error while attempting to bind on address ('127.0.0.1', 8000)
 ```
 
-**Solusi:** Ganti port:
+**Solution:** Change port:
 
 ```powershell
 uvicorn src.hpvd.api:app --host 127.0.0.1 --port 8001 --reload
 ```
 
-Atau cari dan kill proses yang memakai port 8000:
+Or find and kill the process using port 8000:
 
 ```powershell
 netstat -ano | findstr :8000
@@ -462,9 +462,9 @@ taskkill /PID <pid> /F
 
 ### E6 -- `ModuleNotFoundError: No module named 'fastapi'`
 
-**Penyebab:** Dependency API belum terinstall.
+**Cause:** API dependencies are not installed.
 
-**Solusi:**
+**Solution:**
 
 ```powershell
 pip install -e ".[api]"
@@ -474,13 +474,13 @@ pip install fastapi uvicorn httpx
 
 ---
 
-### E7 -- Corpus ter-load tapi query tidak return kandidat
+### E7 -- Corpus loaded but query returns no candidates
 
-**Gejala:** `/health` menunjukkan `corpus_size > 0`, tapi `POST /query` mengembalikan `candidates: []`.
+**Symptoms:** `/health` shows `corpus_size > 0`, but `POST /query` returns `candidates: []`.
 
-**Penyebab paling umum:** `sector` di request tidak cocok dengan `KL_DOMAIN` yang di-load.
+**Most common cause:** `sector` in the request does not match loaded `KL_DOMAIN`.
 
-**Cek:** Nilai `sector` di request harus sama persis dengan `KL_DOMAIN` di `.env` (case-sensitive).
+**Check:** `sector` value in the request must exactly match `KL_DOMAIN` in `.env` (case-sensitive).
 
 ```json
 // .env: KL_DOMAIN=banking
@@ -491,23 +491,23 @@ pip install fastapi uvicorn httpx
 
 ---
 
-### E8 -- Swagger UI tidak bisa diakses
+### E8 -- Swagger UI is inaccessible
 
-**Gejala:** `http://127.0.0.1:8000/docs` tidak muncul.
+**Symptoms:** `http://127.0.0.1:8000/docs` does not appear.
 
-**Penyebab:** Server tidak berjalan, atau port berbeda.
+**Cause:** Server is not running, or using a different port.
 
-**Cek:** Pastikan terminal menampilkan `Application startup complete.` dan tidak ada error. Gunakan port yang sama dengan yang dijalankan.
+**Check:** Ensure terminal shows `Application startup complete.` and no errors. Use the same port as the running server.
 
 ---
 
-## Referensi
+## References
 
-| Dokumen | Isi |
+| Document | Content |
 |---------|-----|
-| [HPVD_CORE.md](HPVD_CORE.md) | Arsitektur internal, data model, retrieval pipeline |
-| [MANITHY_INTEGRATION.md](MANITHY_INTEGRATION.md) | Posisi HPVD dalam pipeline Manithy v1, J-files reference |
-| [CHANGELOG.md](CHANGELOG.md) | History versi dan capabilities |
+| [HPVD_CORE.md](HPVD_CORE.md) | Internal architecture, data model, retrieval pipeline |
+| [MANITHY_INTEGRATION.md](MANITHY_INTEGRATION.md) | HPVD position in Manithy v1 pipeline, J-files reference |
+| [CHANGELOG.md](CHANGELOG.md) | Version history and capabilities |
 | `src/hpvd/api.py` | Source code FastAPI app |
 | `src/hpvd/kl_loader.py` | Source code KL corpus loader |
-| `scripts/seed_hpvd_knowledge.py` | Script upload knowledge objects ke KL |
+| `scripts/seed_hpvd_knowledge.py` | Script to upload knowledge objects to KL |

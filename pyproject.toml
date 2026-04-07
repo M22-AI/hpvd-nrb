@@ -60,8 +60,8 @@ api = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/kalibry/hpvd-m22/docs"
-Repository = "https://github.com/kalibry/hpvd-m22"
+Documentation = "https://github.com/M22-AI/hpvd-nrb/docs"
+Repository = "https://github.com/M22-AI/hpvd-nrb"
 
 [tool.setuptools.packages.find]
 where = ["src"]

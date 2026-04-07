@@ -2,102 +2,102 @@
 
 ---
 
-## v1.0.0-alpha3 — HPVD REST API + KL Integration — Current
+# # v1.0.0-alpha3 — HPVD rest API + KL Integration — Current
 
-**Released:** April 2026
+* *Released: * * April 2026
 
-### Capabilities Delivered (alpha3)
+# # # Capabilities Delivered (alpha3)
 
 | Capability | Status | Details |
 |-----------|--------|---------|
-| FastAPI REST API layer | ✅ | `POST /query` (J13 → PipelineOutput), `GET /health` |
-| KLCorpusLoader | ✅ | Load corpus dari KL REST API saat startup (httpx sync, 6-step flow) |
-| object_type inference | ✅ | Infer dari isi dokumen: `policy_id` / `product_id` / `mapping_id` / `doc_type` |
-| `.env` support | ✅ | `KL_API_KEY`, `KL_BASE_URL`, `KL_DOMAIN` via python-dotenv |
-| httpx HTTP client | ✅ | Sync HTTP client untuk semua KL API calls |
+| FastAPI rest API layer | ✅ | __ code_0__ (J13 PipelineOutput)→, __ code_1 __ |
+| KLCorpusLoader | ✅ | Load corpus from KL rest API at startup (httpx sync, 6-step flow) |
+| object_type inference | ✅ | Infer from the contents of the document: __ code_0 __ / __ code _1 __ / __ code _2 __ / __ code _3 __ |
+| __ code_0 __ support | ✅ | __code_1 __, __ code_2 __,__ code_3 __ via python-dotenv |
+| httpx HTTP client | ✅ | sync HTTP client for all KL API calls |
 
-### Known Limitations (alpha3)
+# # # Known Limitations (alpha3)
 
-- Corpus reload hanya saat startup (tidak ada hot reload)
-- Tidak ada auth untuk endpoint HPVD (internal NRB use only)
-- `object_type` di-infer dari content, bukan dari KL `document_type` metadata
-- Hanya support satu domain/sector per instance
+- Corpus reload only at startup (no hot reload)
+- No auth for HPVD endpoint (internal NRB use only)
+- __code_0 __ inferred from content, not from KL __ code_1__ metadata
+- Only support one domain/sector per instance
 
 ---
 
-## v1.0.0-alpha2 — Manithy v1 Architecture Pivot
+# # v1.0.0-alpha2 — Manithy v1 Architecture Pivot
 
-**Released:** April 2026
+* *Released: * * April 2026
 
-### Architectural Pivot: Kalibry Finance → Manithy v1
+# # # Architectural Pivot: Kalibry Finance → Manithy v1
 
-Project ini mengalami architectural pivot dari "Kalibry Finance / Trajectory Intelligence" ke **Manithy v1 — Deterministic Attestation System**. Perubahan utama:
+This project experienced an architectural pivot from "Kalibry Finance / Trajectory Intelligence" to * *Manithy v1 — Deterministic Attestation System* *. Key changes:
 
-| Dimensi | Sebelum (alpha1) | Sesudah (alpha2) |
+| Dimensions | Before (alpha1) | After (alpha2) |
 |---------|-----------------|-----------------|
 | Identity | Kalibry Finance / Matrix22 | Manithy v1 |
-| Peran HPVD | Cari analog historis (60×45 matrix) | Retrieve Knowledge (Policy/Product/RuleMapping) |
-| Posisi HPVD | Post-Core (triggered by J13 dari Core) | NRB (sebelum Core, sesudah Parser) |
-| Primary input | `HPVDInputBundle` (trajectory + DNA) | `observed_data + metadata.sector` dari Parser |
-| Primary output | `hpvd_output_v1` (analog families) | `candidates [{type, data, provenance}]` |
-| Domain scope | Finance-only (OHLCV) | Sector-agnostic (Banking/Finance/Chatbot) |
+| Role of HPVD | Search historical analogues (60×45 matrix) | Retrieve Knowledge (Policy/Product/RuleMapping) |
+| HPVD position | Post-Core (triggered by J13 from Core) | NRB (before Core, after Parser) |
+| primary input | __ code_0 __ (trajectory + DNA) | __ code_1 __ from Parser |
+| primary output | __ code_0 __ (analog families) | __ code_1 __ |
+| Domain scope | Finance-only(OHLCV) | Sector-agnostic (Banking/Finance/Chatbot) |
 
-### Capabilities Delivered (alpha2)
+# # # Capabilities Delivered (alpha2)
 
 | Capability | Status | Details |
 |-----------|--------|---------|
-| KnowledgeRetrievalStrategy | ✅ | Sector filter + field-based matching + mandatory rule_mapping |
-| Knowledge schemas | ✅ | `PolicyObject`, `ProductObject`, `RuleMappingObject`, `DocumentSchema`, `KnowledgeCandidate` |
-| HPVDPipelineEngine.build_knowledge_index() | ✅ | Convenience builder for Knowledge Layer corpus |
-| J13 Manithy v1 fields | ✅ | `observed_data` + `sector` fields added (backward compatible) |
-| Domain alias: `"knowledge"` | ✅ | New domain in `StrategyDispatcher` |
-| 13 new knowledge retrieval tests | ✅ | K1–K7 scenarios + schema unit tests |
+| KnowledgeRetrievalStrategy | ✅ | Sector filter + field-based matching + mandatory rule_map |
+| Knowledge schemas | ✅ | __ code_0 __, __ code_1__, __ code_2__, __ code_3__, __ code_4 __ |
+| HPVDPipelineEngine.build_knowledge_index() ✅ | | Convenience builder for Knowledge Layer corpus |
+| J13 Manithy v1 fields | ✅ | __ code_0__ + __code_1 __ fields added (backward compatible) |
+| Domain alias: __ code_0 __ | ✅ | New domain in __ code_1 __ |
+| 13 new knowledge retrieval tests ✅ | | K1-K7scenarios + schema unit tests |
 | docs/HPVD_CORE.md rewrite | ✅ | Primary interface = Knowledge objects. Finance = secondary subsection. |
-| docs/MANITHY_INTEGRATION.md update | ✅ | HPVD in NRB, new pipeline diagram, updated J-files reference |
-| .cursor/rules/hpvd_specs.mdc update | ✅ | J-file position, legacy finance boundary, KnowledgeCandidate contract |
+| docs/MANITHY_INTEGRATION.md update ✅ | | HPVD in NRB, new pipeline diagram, updated J-files reference |
+| .cursor/rules/hpvd_specs.mdc update ✅ | | J-file position, legacy finance boundary, KnowledgeCandidate contract |
 
-### Known Limitations (alpha2)
+# # # Known Limitations (alpha2)
 
-- `KnowledgeRetrievalStrategy` uses in-memory storage (no persistent Knowledge Layer API yet)
-- Field-based matching is keyword-level only (no semantic/vector similarity yet)
-- `NRBOrchestrator` not yet implemented (HPVD called directly via HPVDPipelineEngine)
-- `PMR` and `KnowledgeBuilder` not yet implemented (NRB pipeline incomplete)
-- No Qdrant integration (FAISS in-memory only)
-- No REST/gRPC API
+- __code_0 __ uses in-memory storage (no persistent Knowledge Layer API yet)
+-Field-based matching is keyword-level only (no semantic/vector similarity yet)
+- __code_0 __ not yet implemented (HPVD called directly via HPVDPipelineEngine)
+- __ code_0 __ and __code_1 __ not yet implemented (NRB pipeline incomplete)
+- No Qdrant integration (FAISSin-memory only)
+- REST No./gRPC API
 - No real sector data (all testing uses synthetic/fixture data)
 
 ---
 
-## v1.0.0-alpha1 — Finance Engine (Legacy)
+# # v1.0.0-alpha1 — Finance Engine (Legacy)
 
-**Released:** January–March 2026
+* *Released: * * January–March 2026
 
-### Capabilities Delivered (MVP)
+# # # Capabilities Delivered (MVP)
 
 | Capability | Status | Details |
 |-----------|--------|---------|
-| Sparse regime filtering | ✅ | O(1) inverted index, 27 regime combinations |
-| Dense FAISS search | ✅ | IVFFlat/Flat with 256-d PCA embeddings |
+| Sparse filtering regime | ✅ | O(1) inverted index, 27 regime combinations |
+| Dense FAISS search ✅ | | IVFFlat/Flat with 256-d PCA embeddings |
 | Multi-channel fusion | ✅ | Trajectory distance + DNA similarity (configurable weights) |
-| Analog Family formation | ✅ | Regime-grouped families with coherence + uncertainty |
-| Outcome-blind contract | ✅ | `HPVDInputBundle.validate()` rejects outcome fields |
-| Embedding lifecycle guard | ✅ | `RuntimeError` if PCA not fitted before transform |
-| Serializer `hpvd_output_v1` | ✅ | `to_dict()` / `to_json()` / `from_dict()` round-trip |
-| CLI entrypoint | ✅ | `build-index` dan `search` subcommands |
-| Deprecation on legacy API | ✅ | `build()`, `search()`, `Trajectory` input warned |
-| 72 automated tests | ✅ | Contract, scenarios T1–T8, embedding, sparse, trajectory |
-| Multi-domain adapter layer | ✅ | `HPVDPipelineEngine` + `FinanceStrategy` + `DocumentStrategy` |
-| KL integration (v2) | ✅ | `KLClient`, `KLDocumentLoader`, pipeline demo |
+| Analog Family formation ✅ | | Regime-groupedfamilies with coherence + uncertainty |
+| Outcome-blind contract | ✅ | __ code_0 __ rejects outcome fields |
+| Embedding lifecycle guard | ✅ | __ code_0 __ if PCA not fitted before transform |
+| Serializer __ code_0 __ | ✅ | __code_ 1 __ / __code_ 2 __/__ code_3 __ round-trip |
+| CLI entrypoint | ✅ | __ code_0__ and __ code_1 __ subcommands |
+| Deprecation on legacy API | ✅ | __ code_0 __, __ code_1__, __ code_2 __ input warned |
+| 72 automated tests ✅ | | Contract, scenarios T1-T8, embedding, sparse, trajectory |
+| Multi-domain adapter layer | ✅ | __ code_0 __+__ code_1 __ + __ code_2__ |
+| KL integration (v2) | ✅ | __ code_0__, __ code_1 __, demo pipeline |
 
-**Performance (synthetic, single machine):**
-- Build time: ~0.5s for 500 trajectories
-- Search latency: ~10–15ms per query
+* *Performance (synthetic, single machine): * *
+-Build time: ~0.5s for 500 trajectories
+-Search latency: ~10-15ms per query
 - Target: <50ms at 100K trajectories
 
-### Known Limitations (Not Yet Implemented)
+# # # Known Limitations (Not Yet Implemented)
 
-- No Qdrant integration (FAISS in-memory only, save/load via pickle)
-- No REST/gRPC API (CLI and Python API only)
+- No Qdrant integration (FAISSin-memory only, save/load via pickle)
+- No rest/gRPC API (CLI and Python API only)
 - No PMR-DB integration (boundary defined, not built)
 - No real market data pipeline (all testing uses synthetic data)
 - No cross-encoder reranking
@@ -106,62 +106,62 @@ Project ini mengalami architectural pivot dari "Kalibry Finance / Trajectory Int
 
 ---
 
-## Roadmap (Manithy v1)
+# # Roadmap (Manithy v1)
 
-### Phase 0 — Knowledge Layer Starter (CURRENT)
+# # # Phase 0 — Knowledge Layer Starter (CURRENT)
 
-Build dan validate Knowledge Layer retrieval dengan fixture data (Policy/Product/RuleMapping JSON files per sektor).
+Build and validate Knowledge Layer retrieval with data fixture (Policy/Product/RuleMapping JSON files per sector).
 
-Key tasks (done): `KnowledgeRetrievalStrategy` → `KnowledgeIndex` → sector filter + field match → mandatory rule_mapping → 13 new tests passing.
+Key tasks (done): __ code_0 __ → __code_1 __ → sector filter + field match → mandatory rule_mapping → 13 new tests passing.
 
-**Success criteria (done):** `KnowledgeRetrievalStrategy` retrieves correct candidates for Banking/Finance/Chatbot sectors. 147 tests passing.
+* *Success criteria (done): * *__ code_0 __ retrieves correct candidates for Banking/Finance/Chatbot sectors. 147 tests passing.
 
-### Phase 1 — NRB Orchestrator + Parser
+# # # Phase 1 — NRB Orchestrator + Parser
 
-Implement NRB pipeline: `NRBOrchestrator` → `ParserRegistry` → `ParserBanking` / `ParserChatbot` → HPVD → PMR → `KnowledgeBuilder`.
+Implementation NRB pipeline: __ code_0__ → __ code_1 → __ code_2__ / __ code _3 __ → HPVD → PMR → __ code_4 __.
 
-Key tasks: `NRBOrchestrator.run_nrb(request)` → Parser per sektor → HPVD → PMR (hypothesis builder) → KnowledgeBuilder (KNOWN/UNKNOWN/CONFLICT).
+Key tasks: __ code_0 __ → Parser per → sector → HPVD PMR (hypothesis builder) → KnowledgeBuilder (KNOWN/UNKNOWN/CONFLICT).
 
-**Success criteria:** Full NRB pipeline dari raw request → epistemic state (KNOWN/UNKNOWN/CONFLICT).
+* *Success criteria: * * Full NRB pipeline from raw request → epistemic state (KNOWN/UNKNOWN/CONFLICT).
 
-### Phase 2 — Knowledge Layer REST API
+# # # Phase 2 — Knowledge Layer rest API
 
-Move dari in-memory JSON files ke persistent Knowledge Layer dengan REST API.
+Move from in-memory JSON files to persistent Knowledge Layer with rest API.
 
-Key tasks: REST endpoint `GET /knowledge?sector=banking&type=policy` → versioning → snapshot pinning.
+Key tasks: rest endpoint __ code_0 __ → versioning → snapshot pinning.
 
-**Success criteria:** `KnowledgeRetrievalStrategy` retrieves from REST API, tidak dari in-memory. Query latency <50ms.
+* *Success criteria: * *__ code_0 __ retrieves from rest API, not from in-memory. Query latency <50ms.
 
-### Phase 3 — Core Integration (t-1 Boundary)
+# # # Phase 3 — Core Integration (t-1 Boundary)
 
-Connect NRB output (epistemic state) ke Core layer melalui boundary t-1.
+Connect NRB output (epistemic state) to Core layer via boundary t-1.
 
-Key tasks: `Producer t-1` → freeze observed_state → `Adapter (CCR)` → `VectorState (J06)` → `V1` (Coverage) → `V3` (Decision) → `Evidence Pack`.
+Key tasks: __ code_0__ → freeze observed_state → __ code_1 → __ __code_2 → ____ code_3 __ (Coverage) → __code_4 __ (Decision) → __ code_5 __.
 
-**Success criteria:** End-to-end test: raw request → Parser → HPVD → PMR → KnowledgeBuilder → Core → Evidence Pack.
+* *Success criteria: * * End-to-end test: raw request → Parser → HPVD → PMR → KnowledgeBuilder → Core → Evidence Pack.
 
-### Phase 4 — Production API & Replay
+# # # Phase 4 — Production API & Replay
 
-Expose Manithy system sebagai REST API dengan deterministic replay capability.
+Expose Manithy system as rest API with deterministic replay capability.
 
-Key tasks: FastAPI → authentication → `ReplayReport` → Docker packaging.
+Key tasks: FastAPI → authentication → __ code_0 __ → Docker packaging.
 
-### Phase 5 — Finance Market Data (Legacy Path)
+# # # Phase 5 — Finance Market Data (Legacy Path)
 
-Jika Finance market data (OHLCV) tetap dibutuhkan: Real data pipeline dengan EODHD → Qdrant migration → cross-encoder reranking.
+If Finance market data (OHLCV) is still needed: Real data pipeline → with EODHD → Qdrant migration cross-encoder reranking.
 
-Key tasks: EODHD data loader → trajectory builder → R45 features → `QdrantTrajectoryIndex`.
+Key tasks: EODHD data loader → trajectory builder → R45 features → __ code_0__.
 
-**Success criteria:** `FinanceRetrievalStrategy` returns meaningful analog families on real AAPL/MSFT/GOOGL within <50ms.
+* *Success criteria: * *__ code_0 __ returns meaningful analog families on real AAPL/MSFT/GOOGL within <50ms.
 
 ---
 
-## Test History
+# # Test History
 
 | Date | Tests | Notes |
 |------|-------|-------|
-| 2026-01-15 | 29 passed | Early suite: synthetic scenarios (7) + sparse index (10) + trajectory (12) |
-| 2026-03-14 | 72 passed | Full suite: added contract (30) + embedding (7) + adapters + KL integration |
-| 2026-04-01 | 147 passed | Architecture pivot: added 13 knowledge retrieval tests (K1–K7 + schema). 72 legacy tests preserved. |
+| 2026-01-15| 29 passed | Early suite: synthetic scenarios (7) + sparse index (10) + trajectory (12) |
+| 2026-03-14| 72 passed | Full suite: added contract (30) + embedding (7) + adapters + KL integration |
+| 2026-04-01| 147 passed | Architecture pivot: added 13 knowledge retrieval tests (K1-K7 + schema). 72 legacy tests preserved. |
 
-> `docs/synthetic_test_results.md` (Jan 2026) deprecated dan digantikan oleh test suite saat ini.
+> __code_0 __ (Jan 2026) deprecated and replaced by the current test suite.
