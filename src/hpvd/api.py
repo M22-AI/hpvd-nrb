@@ -51,13 +51,14 @@ class HPVDQueryRequest(BaseModel):
 
     Matches the output of ``banking_parser_sdk.build_hpvd_query()``:
 
-    - ``query_id`` and ``sector`` are required routing fields added by the caller.
+    - ``commit_id`` and ``sector`` are required routing fields added by the caller.
+      ``commit_id`` aligns with the Manithy commit boundary identifier (J01).
     - ``observed`` contains the merged field values from all Parser runs.
     - ``availability`` is accepted and passed through but not used by HPVD
       internally; it is consumed by PMR and Knowledge Builder in later stages.
     """
 
-    query_id: str
+    commit_id: str
     sector: str
     observed: Dict[str, Any] = Field(default_factory=dict)
     availability: Dict[str, bool] = Field(default_factory=dict)
@@ -160,7 +161,7 @@ async def query(request: HPVDQueryRequest) -> Dict[str, Any]:
     # `availability` is not used by HPVD — it is preserved for downstream
     # consumers (PMR, Knowledge Builder) via the response context.
     j13_dict = {
-        "query_id": request.query_id,
+        "query_id": request.commit_id,
         "scope": {"domain": "knowledge"},
         "sector": request.sector,
         "observed_data": request.observed,
@@ -172,7 +173,7 @@ async def query(request: HPVDQueryRequest) -> Dict[str, Any]:
     except (ValueError, KeyError):
         raise
     except Exception as exc:
-        logger.exception("Unexpected error processing query %s", request.query_id)
+        logger.exception("Unexpected error processing query %s", request.commit_id)
         raise HTTPException(status_code=500, detail=f"Internal error: {exc}") from exc
 
 

@@ -160,7 +160,7 @@ Input is direct output from `banking_parser_sdk` -- see [Section 5](#5-request--
 | Code | Condition |
 |------|---------|
 | `200` | Success |
-| `400` | Malformed request -- `query_id` or `sector` missing |
+| `400` | Malformed request -- `commit_id` or `sector` missing |
 | `503` | Empty corpus -- KL unreachable at startup |
 | `500` | Unexpected internal error |
 
@@ -174,7 +174,7 @@ Input is direct output from `banking_parser_sdk` -- see [Section 5](#5-request--
 banking_parser_sdk
   run_parser("LENDER", fields)        --> {"observed": {...}, "availability": {...}}
   run_parser("LOAN_INFORMATION", ...) --> {"observed": {...}, "availability": {...}}
-  build_hpvd_query(results, sector, query_id)
+  build_hpvd_query(results, sector, commit_id)
                                       --> HPVDQueryRequest (kirim ke HPVD)
                                                  |
                                            POST /query
@@ -190,7 +190,7 @@ HPVD accepts the Parser SDK format directly. Adaptation to internal pipeline for
 
 ```json
 {
-  "query_id": "REQ-001",
+  "commit_id": "REQ-001",
   "sector": "banking",
   "observed": {
     "loan_amount": 50000000,
@@ -207,7 +207,7 @@ HPVD accepts the Parser SDK format directly. Adaptation to internal pipeline for
 
 | Field | Type | Required | Description |
 |-------|------|-------|-----------|
-| `query_id` | string | **Yes** | Unique identifier per request, created by caller |
+| `commit_id` | string | **Yes** | Unique identifier per request, created by caller |
 | `sector` | string | **Yes** | Sector name: `"banking"`, `"finance"`, `"chatbot"` -- must match `KL_DOMAIN` |
 | `observed` | object | Recommended | Merged field values from all Parser runs. More relevant fields generally improve scoring accuracy |
 | `availability` | object | No | Epistemic flags from Parser SDK. Accepted by HPVD but unused -- forwarded to PMR and Knowledge Builder in the next layer |
@@ -228,7 +228,7 @@ results = [
 ]
 
 # Build HPVD query dari merged results
-payload = build_hpvd_query(results, sector="banking", query_id="REQ-001")
+payload = build_hpvd_query(results, sector="banking", commit_id="REQ-001")
 
 # Kirim ke HPVD
 response = httpx.post("http://127.0.0.1:8000/query", json=payload)
@@ -242,7 +242,7 @@ Invoke-RestMethod -Uri http://127.0.0.1:8000/query `
   -Method POST `
   -ContentType "application/json" `
   -Body '{
-    "query_id": "REQ-001",
+    "commit_id": "REQ-001",
     "sector": "banking",
     "observed": {
       "loan_amount": 50000000,
@@ -261,7 +261,7 @@ Invoke-RestMethod -Uri http://127.0.0.1:8000/query `
 ```json
 {
   "schema_id": "manithy.hpvd_retrieval_raw.v1",
-  "query_id": "REQ-001",
+  "commit_id": "REQ-001",
   "domain": "knowledge",
   "candidates": [
     {
@@ -299,7 +299,7 @@ Invoke-RestMethod -Uri http://127.0.0.1:8000/query `
 ```json
 {
   "schema_id": "manithy.analog_family_assignment.v1",
-  "query_id": "REQ-001",
+  "commit_id": "REQ-001",
   "families": [
     {
       "family_id": "knowledge_policy",
@@ -403,13 +403,13 @@ A file may contain one object or an array of multiple objects:
 {"detail": "field required"}
 ```
 
-**Cause:** Request body does not include `query_id` or `sector`.
+**Cause:** Request body does not include `commit_id` or `sector`.
 
 **Solution:** Ensure both fields are present in the body:
 
 ```json
 {
-  "query_id": "REQ-001",
+  "commit_id": "REQ-001",
   "sector": "banking",
   "observed": {}
 }
